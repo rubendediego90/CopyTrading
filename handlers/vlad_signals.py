@@ -24,7 +24,7 @@ class VladSignal:
         print('orders_open',orders_open)
         
         if orders_type["hasMoveSL"]:
-            print("Mover SL")
+            print("ACTION - Mover SL")
             
             #mover el stop de las ordenes encontradas
 
@@ -32,7 +32,7 @@ class VladSignal:
             pass
             
         if orders_type["hasClosePartial"]:
-            print("Coger parcial")
+            print("ACTION - Parcial")
             # contar las ordenes abiertas, si hay dos cerrar una de menor tp,
             # si hay una mirar el % y cerrar ese %
             
@@ -40,18 +40,15 @@ class VladSignal:
             return
         
         if orders_type["hasNewOrder"]:
+            print("ACTION - Nueva orden")
             #TODO revisar historico
             perdida = self.connectMetaTrader.calcular_perdida()
             print("perdida diaria",perdida)
             
-            print("Nueva order")
             valores = self.extraer_valores(msg)
-            for etiqueta, numeros in valores.items():
-                print(f"{etiqueta}: {numeros}")
-                
             lotes = self.connectMetaTrader.calc_lotes(symbol=symbol,sl=valores["SL"], entry=valores["Entrada"])
-             
             signalType:SignalType = SignalType.BUY if valores['isLong'] else SignalType.SELL
+            
             order = OrderEvent(
                 symbol=symbol,
                 volume=lotes,
@@ -62,21 +59,13 @@ class VladSignal:
                 comment=f"VLAD_{symbol}_TP1",
                 target_price=0.0 #TODO para buy limit y operaciones sin a mercado arreglar
                 )
+            
             print("order",order)
+            
             self.connectMetaTrader.execute_order(order)
             
             return
-    '''
-    crear ordern
-    
-    buscar en el texto buscar % y poner los numeros anterirores ahasta el espacio anterior, si no hay buscar mitad  y devolver 50%, si no devolver None
 
-    llegamos a metaTrader con el % establecido de cierre
-
-    Si hay dos tp cerrar uno, si solo hay un tp cerrar el % mandado
-
-
-    '''    
     def getSymbol(self,msg):
         if SYMBOLS_VLAD.SP500.lower() in msg.lower():
             return SYMBOL.SP500.value

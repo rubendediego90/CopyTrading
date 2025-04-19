@@ -15,12 +15,6 @@ class MetaTrader5Broker():
         # Inicializacion de la plataforma
         self._initialize_platform()
         
-        # TODO ver si podemos operas (restricciones ftmo)
-        # Fines de semana
-        # Calcular noticias
-        # Perdidas en el dia
-        
-        
         #Esta activado el trading algoritmico
         self._check_algo_trading_enabled()
         

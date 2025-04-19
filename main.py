@@ -25,13 +25,11 @@ client.start()
 canalsYGroups = CanalsYGroups(client)
 canalsYGroups.getCanals()
 client.loop.run_until_complete(canalsYGroups.getGroups())
-#client.loop.run_until_complete(canalsYGroups.obtener_ultimos_mensajes(int(group_used)))
 
 chats_a_escuchar = [
     int(CANALS.BIT_LOBO),
     int(CANALS.SIGNAL_VLAD),
     int(CANALS.CRIPTO_SENIALES),
-    int(CANALS.CARLOS_PRIVADO),
     int(GROUPS.TEST),
     #int(GROUPS.VLAD_DUDAS),
     #int(GROUPS.RUPENS),
@@ -44,10 +42,7 @@ connectMetaTrader = MetaTrader5Broker(symbols)
 async def manejador_mensajes(event):
     chat_id = event.chat_id  # 👈 ID del canal o grupo
     mensaje = event.raw_text
-    print('msn',chat_id)
-    print('chat_id',chat_id)
     await canalsYGroups.msgLog(event)
-    #print("event",event)
     print("chat_id",chat_id)
     print("canal vlad señales",int(CANALS.SIGNAL_VLAD))
     print("canal cripto signal señales",int(CANALS.CRIPTO_SENIALES))
@@ -55,7 +50,6 @@ async def manejador_mensajes(event):
     print("canal lbbo signal señales",int(CANALS.BIT_LOBO))
     print("es lobo?",chat_id == int(CANALS.BIT_LOBO))
     print("es vlad?",chat_id == int(CANALS.SIGNAL_VLAD))
-    print("es carlos?",chat_id == int(CANALS.CARLOS_PRIVADO))
     print("es señales nuevo?",chat_id == int(CANALS.CRIPTO_SENIALES))
     print("es TEST?",chat_id == int(GROUPS.TEST))
     
