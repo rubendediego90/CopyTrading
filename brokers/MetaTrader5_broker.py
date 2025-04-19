@@ -3,6 +3,7 @@ import os
 from dotenv import load_dotenv, find_dotenv
 from utils.utils import Utils
 import datetime
+from event.events import OrderEvent
 
 class MetaTrader5Broker():
     
@@ -167,7 +168,11 @@ class MetaTrader5Broker():
         riesgo_dinero = balance * risk  # Riesgo en dinero
         diferencia_precio = abs(entry - sl)  # Diferencia de precio (Stop Loss - Entrada)
         volumen = riesgo_dinero / (diferencia_precio * tamanio_contrato)  # Cálculo del volumen
-        return volumen
+        
+        volume_step = symbol_info.volume_step  
+        volumeFinal = round(volumen / volume_step) * volume_step
+        if(volumeFinal < symbol_info.volume_min): return symbol_info.volume_min
+        return volumeFinal
     
     def obtener_historial_operaciones(self):
         
@@ -224,5 +229,88 @@ class MetaTrader5Broker():
             print(f"Has perdido un total de {abs(perdida_total):.2f} USD hoy.")
         else:
             print(f"Has ganado un total de {perdida_total:.2f} USD hoy.")
+            
+    def execute_order(self, order_event: OrderEvent) -> None:
+
+        # Evaluamos el tipo de orden que se quiere ejecutar, y llamamos al método adecuado
+        if order_event.target_order == "MARKET":
+            # Llamamos al método que ejecuta órdenes a mercado
+            self._execute_market_order(order_event)
+        else:
+            # Llamamos al método que coloque órdenes pendientes
+            self._send_pending_order(order_event)
+
+    def _execute_market_order(self, order_event: OrderEvent) -> None:
+        # Comprobamos si la orden es de compra o de venta
+        if order_event.signal == "BUY":
+            # Orden de compra
+            order_type = mt5.ORDER_TYPE_BUY
+        elif order_event.signal == "SELL":
+            # Orden de venta
+            order_type = mt5.ORDER_TYPE_SELL
+        else:
+            raise Exception(f"ORD EXEC: La señal {order_event.signal} no es válida")
+
+        # Creación del market order request
+        market_order_request = {
+            "action": mt5.TRADE_ACTION_DEAL,
+            "symbol": order_event.symbol,
+            "volume": order_event.volume,
+            'price': mt5.symbol_info(order_event.symbol).bid,
+            "sl": order_event.sl,
+            "tp": order_event.tp,
+            "type": order_type,
+            "deviation": 0,
+            "comment":order_event.comment,
+            "type_filling": mt5.ORDER_FILLING_FOK,
+        }
+
+        # Mandamos el trade request para ser ejecutado
+        result = mt5.order_send(market_order_request)
+
+        # Verificar el resultado de la ejecución de la orden
+        if self._check_execution_status(result):
+            print(f"{Utils.dateprint()} - Market Order {order_event.signal} para {order_event.symbol} de {order_event.volume} lotes ejecutada correctamente")
+            # Generar el execution event y añadirlo a la cola
+            self._create_and_put_execution_event(result)
+        else:
+            #Mandaremos un mensaje de error
+            print(f"{Utils.dateprint()} - Ha habido un error al ejecutar la Market Order {order_event.signal} para {order_event.symbol}: {result.comment}")
+
+    def _send_pending_order(self, order_event: OrderEvent) -> None:
+        # Comprobar si es de tipo STOP o de tipo LIMITE
+        if order_event.target_order == "STOP":
+            order_type = mt5.ORDER_TYPE_BUY_STOP if order_event.signal == "BUY" else mt5.ORDER_TYPE_SELL_STOP
+        elif order_event.target_order == "LIMIT":
+            order_type = mt5.ORDER_TYPE_BUY_LIMIT if order_event.signal == "BUY" else mt5.ORDER_TYPE_SELL_LIMIT
+        else:
+            raise Exception(f"ORD EXEC: La orden pendiente objetivo {order_event.target_order} no es válida")
         
+        # Creación de la pending order request
+        pending_order_request = {
+            "action": mt5.TRADE_ACTION_PENDING,
+            "symbol": order_event.symbol,
+            "volume": order_event.volume,
+            "sl": order_event.sl,
+            "tp": order_event.tp,
+            "type": order_type,
+            "price": order_event.target_price,
+            "deviation": 0,
+            "comment": order_event.comment,
+            "type_filling": mt5.ORDER_FILLING_FOK,
+            "type_time": mt5.ORDER_TIME_GTC
+        }
+
+        # Mandamos el trade request para colocar la orden pendiente
+        result = mt5.order_send(pending_order_request)
+        
+        
+    def _check_execution_status(self, order_result) -> bool:
+        if order_result.retcode == mt5.TRADE_RETCODE_DONE:
+            # todo ha ido bien
+            return True
+        elif order_result.retcode == mt5.TRADE_RETCODE_DONE_PARTIAL:
+            return True
+        else:
+            return False
 

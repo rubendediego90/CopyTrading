@@ -1,7 +1,7 @@
 from constantes.types import SYMBOLS_VLAD, SYMBOL
 import re
 from brokers.MetaTrader5_broker import MetaTrader5Broker
-
+from event.events import OrderEvent,OrderType,SignalType
 class VladSignal:
     def __init__(self, connectMetaTrader : MetaTrader5Broker):
         self.connectMetaTrader : MetaTrader5Broker = connectMetaTrader
@@ -40,6 +40,7 @@ class VladSignal:
             return
         
         if orders_type["hasNewOrder"]:
+            #TODO revisar historico
             perdida = self.connectMetaTrader.calcular_perdida()
             print("perdida diaria",perdida)
             
@@ -49,6 +50,21 @@ class VladSignal:
                 print(f"{etiqueta}: {numeros}")
                 
             lotes = self.connectMetaTrader.calc_lotes(symbol=symbol,sl=valores["SL"], entry=valores["Entrada"])
+             
+            signalType:SignalType = SignalType.BUY if valores['isLong'] else SignalType.SELL
+            order = OrderEvent(
+                symbol=symbol,
+                volume=lotes,
+                signal=signalType,
+                sl=valores['SL'],
+                tp=valores['TP1'],
+                target_order=OrderType.MARKET,
+                comment=f"VLAD_{symbol}_TP1",
+                target_price=0.0 #TODO para buy limit y operaciones sin a mercado arreglar
+                )
+            print("order",order)
+            self.connectMetaTrader.execute_order(order)
+            
             return
     '''
     crear ordern
