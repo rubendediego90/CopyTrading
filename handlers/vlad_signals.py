@@ -156,6 +156,7 @@ class VladSignal:
             "2-)": r"\b2-\)\s*([\d.,]+[KkMmBb]?)",
             "3-)": r"\b3-\)\s*([\d.,]+[KkMmBb]?)",
             "Entrada": r"\b(?:Entrada|Long|Short)[:\-]?\s*([\d.,]+[KkMmBb]?)",
+            "rango": r"([\d.,]+[KkMmBb]?)\s*(?:a|-)\s*([\d.,]+[KkMmBb]?)" 
         }
 
         resultados = {'Entrada_inferior': None,
@@ -171,15 +172,29 @@ class VladSignal:
                       'SL': None,
                       'isShort':None,
                       'isLong':None,
+                      'rango': None  # Nuevo campo para almacenar el rango
                       }
 
-        # Extraemos las coincidencias de cada patrón
+        # Primero, extraemos las coincidencias sin hacer ningún casteo
+        extracciones = {}
         for clave, patron in patrones.items():
             coincidencias = re.findall(patron, texto, flags=re.IGNORECASE)
+            extracciones[clave] = coincidencias if coincidencias else None
+            
+        if extracciones['rango'] and len(extracciones['rango'][0]) == 2:
+            extracciones['rango_inferior'] = [extracciones['rango'][0][0]]
+            extracciones['rango_superior'] = [extracciones['rango'][0][1]]
+        extracciones['rango'] = None 
+
+        # Ahora, limpiamos (casteamos) los valores extraídos
+        for clave, coincidencias in extracciones.items():
             if coincidencias:
+                # Si encontramos coincidencias, las limpiamos
                 resultados[clave] = [self.limpiar_numero(c) for c in coincidencias if self.limpiar_numero(c) is not None]
             else:
+                # Si no encontramos coincidencias, asignamos None
                 resultados[clave] = None
+                
 
         # ✅ Filtro para TP: eliminar 1.0 y 2.0 si están presentes
         if 'TP' in resultados and resultados['TP']:
@@ -220,7 +235,6 @@ class VladSignal:
             # Si alguno de los valores es None, no asignamos isShort o isLong
             resultados['isShort'] = None
             resultados['isLong'] = None
-
 
         return resultados
     
