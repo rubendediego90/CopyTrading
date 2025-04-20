@@ -23,7 +23,7 @@ class VladSignal:
         
         if orders_type["hasMoveSL"]:
             print("ACTION - Mover SL")
-            
+            self.connectMetaTrader.mover_stop_loss_be(symbol,"vlad")
             #mover el stop de las ordenes encontradas
 
             
@@ -31,8 +31,8 @@ class VladSignal:
             
         if orders_type["hasClosePartial"]:
             print("ACTION - Parcial")
-            # contar las ordenes abiertas, si hay dos cerrar una de menor tp,
-            # si hay una mirar el % y cerrar ese %
+            percentage = self.extraer_porcentaje(msg)
+            self.connectMetaTrader.close_partial(symbol,"vlad",partial=percentage)
             
         if orders_type["hasMoveSL"] or orders_type["hasClosePartial"]:
             return
@@ -44,6 +44,12 @@ class VladSignal:
             print("perdida diaria",perdida)
             
             valores = self.extraer_valores(msg)
+            
+            #validaciones 
+            if(valores["SL"] == None or valores["Entrada"] == None or valores["TP1"] == None):
+                print("Parametros importantes para la orden son nulos",valores)
+                return
+            
             lotes = self.connectMetaTrader.calc_lotes(symbol=symbol,sl=valores["SL"], entry=valores["Entrada"])
             signalType:SignalType = SignalType.BUY if valores['isLong'] else SignalType.SELL
                         
@@ -129,7 +135,7 @@ class VladSignal:
         if all(palabra in msg_lower for palabra in words_open_lower):
             hasNewOrder = True
             
-        if any(palabra in msg_lower for palabra in words_partial_lower) and "parcial" in msg_lower:
+        if any(palabra in msg_lower for palabra in words_partial_lower) and "parcial" in msg_lower and "tp" not in msg_lower:
             hasClosePartial = True
         
         return {
@@ -247,6 +253,15 @@ class VladSignal:
         except ValueError:
             print(f"Advertencia: No se pudo convertir el valor '{num_str}' a número.")
             return None
+        
+    def extraer_porcentaje(self,texto):
+    # Buscar el número antes del símbolo '%'
+        resultado = re.search(r'(\d+)%', texto)
+        
+        if resultado:
+            return int(resultado.group(1))  # Devolver el número como un entero
+        else:
+            return 50  # Si no se encuentra un porcentaje, devolver None
 
 
 

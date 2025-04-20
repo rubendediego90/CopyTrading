@@ -35,7 +35,6 @@ chats_a_escuchar = [
     #int(GROUPS.RUPENS),
 ]
 
-connectMetaTrader = MetaTrader5Broker()
 
 @client.on(events.NewMessage(chats=chats_a_escuchar))
 async def manejador_mensajes(event):
@@ -50,13 +49,16 @@ async def manejador_mensajes(event):
     print("es TEST?",chat_id == int(GROUPS.TEST))
     
     if chat_id == int(GROUPS.TEST):#CANALS.SIGNAL_VLAD: 
+        connectMetaTrader = MetaTrader5Broker()
         vladSignal = VladSignal(connectMetaTrader)
         vladSignal.handle(mensaje)
-    
+        connectMetaTrader.disconnect()
     '''
+    
     if chat_id == int(CANALS.SIGNAL_VLAD):#CANALS.SIGNAL_VLAD: 
         vladSignal = VladSignal(connectMetaTrader)
         vladSignal.handle(mensaje)
+    
     '''
             
 

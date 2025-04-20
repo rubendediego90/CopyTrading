@@ -27,7 +27,7 @@ class MetaTrader5Broker():
         #self._get_symbols_in_marketwatch()
         
         
-    def disconnect() -> None:
+    def disconnect(self) -> None:
         # Desconexcion de mt5 
         mt5.shutdown()
     
@@ -158,11 +158,13 @@ class MetaTrader5Broker():
             tamanio_contrato = symbol_info.trade_contract_size
         
         # Cálculo del volumen
-        
         riesgo_dinero = balance * risk  # Riesgo en dinero
         diferencia_precio = abs(entry - sl)  # Diferencia de precio (Stop Loss - Entrada)
         volumen = riesgo_dinero / (diferencia_precio * tamanio_contrato)  # Cálculo del volumen
         
+        return self.ajuste_volumen_step(volumen,symbol_info)
+    
+    def ajuste_volumen_step(self,volumen,symbol_info):
         volume_step = symbol_info.volume_step  
         volumeFinal = round(volumen / volume_step) * volume_step
         if(volumeFinal < symbol_info.volume_min): return symbol_info.volume_min
@@ -322,4 +324,81 @@ class MetaTrader5Broker():
             return True
         else:
             return False
+        
+    def mover_stop_loss_be(self, symbol, comentario_buscado):
+        # Obtener las posiciones activas
+        positions = mt5.positions_get()
+
+        if positions is None or len(positions) == 0:
+            print("No hay posiciones activas")
+            return
+        
+        # Buscar la posición que deseas modificar
+        for position in positions:
+            if position.symbol == symbol and comentario_buscado.lower() in position.comment.lower():
+                # Calcular el nuevo valor de Stop Loss (por ejemplo, en el punto de breakeven)
+                # Este es solo un ejemplo, puede que necesites ajustarlo según tu estrategia
+                
+                # Crear el dict para la modificación
+                request = {
+                    "action": mt5.TRADE_ACTION_SLTP,
+                    "symbol": symbol,
+                    "position": position.ticket,
+                    "price": position.price_open,  # Precio de apertura (no lo modificamos)
+                    "sl": position.price_open,  # El nuevo Stop Loss
+                    "tp": position.tp,  # Precio de Take Profit (no lo modificamos)
+                    "volume": position.volume,  # Volumen de la orden
+                    "type": position.type,  # Tipo de la orden (compra/venta)
+                    "deviation": 0,  # Desviación permitida en puntos
+                    "comment": position.comment
+                }
+
+                # Enviar la solicitud de modificación de orden
+                result = mt5.order_send(request)
+
+        if self._check_execution_status(result):
+            print(f"{Utils.dateprint()} - Posición con ticket {position.ticket} en {position.symbol} se ha movido el STOP Loss a BE correctamente")
+        else:
+            # Mandaremos un mensaje de error
+            print(f"{Utils.dateprint()} - Ha habido un error al mover el STOP Loss a BE la posición {position.ticket} en {position.symbol}: {result.comment}")
+                            
+    def close_partial(self, symbol, comentario_buscado,partial):
+        # Obtener las posiciones activas
+        positions = mt5.positions_get()
+        
+        print("")
+
+        if positions is None or len(positions) == 0:
+            print("No hay posiciones activas")
+            return
+        
+        # Buscar la posición que deseas modificar
+        for position in positions:
+            if position.symbol == symbol and comentario_buscado.lower() in position.comment.lower():
+                nuevo_vol = position.volume*partial/100
+                
+                symbol_info= mt5.symbol_info(position.symbol)
+                nuevo_vol = self.ajuste_volumen_step(nuevo_vol,symbol_info=symbol_info)
+                
+                # Crear el dict para la modificación
+                close_request = {
+                    'action': mt5.TRADE_ACTION_DEAL,
+                    'position': position.ticket,
+                    'symbol': position.symbol,
+                    'volume': nuevo_vol,
+                    'price': mt5.symbol_info(position.symbol).bid,
+                    'type': mt5.ORDER_TYPE_BUY if position.type == mt5.ORDER_TYPE_SELL else mt5.ORDER_TYPE_SELL,
+                    'type_filling': mt5.ORDER_FILLING_FOK,
+                    'comment':position.comment
+                }
+
+                # Mandamos el close_request
+                result = mt5.order_send(close_request)
+
+                if self._check_execution_status(result):
+                    print(f"{Utils.dateprint()} - Posición con ticket {position.ticket} en {position.symbol} y volumen {position.volume} se ha tomado parcial correctamente")
+                else:
+                    # Mandaremos un mensaje de error
+                    print(f"{Utils.dateprint()} - Ha habido un error al cerrar cerrar parcial de la posición {position.ticket} en {position.symbol} con volumen {nuevo_vol}: {result.comment}")
+
 
