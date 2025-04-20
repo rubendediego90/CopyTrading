@@ -35,19 +35,15 @@ chats_a_escuchar = [
     #int(GROUPS.RUPENS),
 ]
 
-symbols = ['BTCUSD','ETHUSD','XAUUSD','US500.cash','US100.cash']
-connectMetaTrader = MetaTrader5Broker(symbols)
+connectMetaTrader = MetaTrader5Broker()
 
 @client.on(events.NewMessage(chats=chats_a_escuchar))
 async def manejador_mensajes(event):
     chat_id = event.chat_id  # 👈 ID del canal o grupo
     mensaje = event.raw_text
     await canalsYGroups.msgLog(event)
-    print("chat_id",chat_id)
-    print("canal vlad señales",int(CANALS.SIGNAL_VLAD))
-    print("canal cripto signal señales",int(CANALS.CRIPTO_SENIALES))
-    print("canal carlos señales",int(CANALS.CARLOS_PRIVADO))
-    print("canal lbbo signal señales",int(CANALS.BIT_LOBO))
+    #print("chat_id",chat_id)
+    #print("canal vlad señales",int(CANALS.SIGNAL_VLAD))
     print("es lobo?",chat_id == int(CANALS.BIT_LOBO))
     print("es vlad?",chat_id == int(CANALS.SIGNAL_VLAD))
     print("es señales nuevo?",chat_id == int(CANALS.CRIPTO_SENIALES))

@@ -18,8 +18,6 @@ class VladSignal:
         
         orders_type = self.getOrderType(msg)
         
-
-        
         orders_open = self.connectMetaTrader.get_open_positions_by_symbol(symbol)
         print('orders_open',orders_open)
         
@@ -48,7 +46,7 @@ class VladSignal:
             valores = self.extraer_valores(msg)
             lotes = self.connectMetaTrader.calc_lotes(symbol=symbol,sl=valores["SL"], entry=valores["Entrada"])
             signalType:SignalType = SignalType.BUY if valores['isLong'] else SignalType.SELL
-            
+                        
             order = OrderEvent(
                 symbol=symbol,
                 volume=lotes,
@@ -59,10 +57,37 @@ class VladSignal:
                 comment=f"VLAD_{symbol}_TP1",
                 target_price=0.0 #TODO para buy limit y operaciones sin a mercado arreglar
                 )
-            
-            print("order",order)
-            
             self.connectMetaTrader.execute_order(order)
+            print("ORDER -1",order)
+
+            if(valores['TP2'] != None):
+                order2 = OrderEvent(
+                    symbol=symbol,
+                    volume=lotes,
+                    signal=signalType,
+                    sl=valores['SL'],
+                    tp=valores['TP2'],
+                    target_order=OrderType.MARKET,
+                    comment=f"VLAD_{symbol}_TP2",
+                    target_price=0.0 #TODO para buy limit y operaciones sin a mercado arreglar
+                    )
+                self.connectMetaTrader.execute_order(order2)
+                print("ORDER - 2",order2)
+                
+            
+            if(valores['TP3'] != None):
+                order3 = OrderEvent(
+                    symbol=symbol,
+                    volume=lotes,
+                    signal=signalType,
+                    sl=valores['SL'],
+                    tp=valores['TP3'],
+                    target_order=OrderType.MARKET,
+                    comment=f"VLAD_{symbol}_TP3",
+                    target_price=0.0 #TODO para buy limit y operaciones sin a mercado arreglar
+                    )
+                self.connectMetaTrader.execute_order(order3)
+                print("ORDER - 3",order3)
             
             return
 
@@ -120,8 +145,10 @@ class VladSignal:
             "TP": r"\bTP[:\-]?\s*([\d.,]+[KkMmBb]?)",
             "TP1": r"\bTP1[:\-]?\s*([\d.,]+[KkMmBb]?)",  
             "TP2": r"\bTP2[:\-]?\s*([\d.,]+[KkMmBb]?)", 
+            "TP3": r"\bTP3[:\-]?\s*([\d.,]+[KkMmBb]?)", 
             "1-)": r"\b1-\)\s*([\d.,]+[KkMmBb]?)",
             "2-)": r"\b2-\)\s*([\d.,]+[KkMmBb]?)",
+            "3-)": r"\b3-\)\s*([\d.,]+[KkMmBb]?)",
             "Entrada": r"\b(?:Entrada|Long|Short)[:\-]?\s*([\d.,]+[KkMmBb]?)",
         }
 
@@ -130,9 +157,11 @@ class VladSignal:
                       'Entrada_sencilla': None,
                       'TP': None,
                       'TP1': None,
+                      'TP3': None,
                       'TP2': None,
                       '1-)': None,
                       '2-)': None,
+                      '3-)': None,
                       'SL': None,
                       'isShort':None,
                       'isLong':None,
@@ -156,6 +185,9 @@ class VladSignal:
 
         if not resultados['TP2']:  # Si TP2 es None o está vacío
             resultados['TP2'] = resultados.get('2-)')
+            
+        if not resultados['TP3']:  # Si TP3 es None o está vacío
+            resultados['TP3'] = resultados.get('3-)')
             
         # Aquí procesamos las listas para devolver solo el primer valor o None si no existen
         for clave in resultados:

@@ -7,7 +7,7 @@ from event.events import OrderEvent
 
 class MetaTrader5Broker():
     
-    def __init__(self, symbol_list : list):
+    def __init__(self):
         # Buscar valores
         load_dotenv(find_dotenv())
         self.account_info = None
@@ -169,13 +169,13 @@ class MetaTrader5Broker():
         return volumeFinal
     
     def obtener_historial_operaciones(self):
-        
+        '''
         # Definir la fecha de hoy
         fecha_hoy = datetime.datetime.now().date()
         
         # Convertir la fecha a timestamp UNIX para el rango de hoy (hora UTC)
-        desde_timestamp = datetime.datetime(fecha_hoy.year, fecha_hoy.month - 1, fecha_hoy.day, 0, 0, 0)
-        hasta_timestamp = datetime.datetime(fecha_hoy.year, fecha_hoy.month +1 , fecha_hoy.day, 23, 59, 59)
+        desde_timestamp = datetime.datetime(fecha_hoy.year, fecha_hoy.month - 1, fecha_hoy.day)
+        hasta_timestamp = datetime.datetime(fecha_hoy.year, fecha_hoy.month +1 , fecha_hoy.day)
         
         # Convertir las fechas a timestamps (segundos desde la época UNIX)
         #desde = int(desde_timestamp.timestamp())
@@ -197,6 +197,23 @@ class MetaTrader5Broker():
             print(f"Ticket: {deal.ticket}, Símbolo: {deal.symbol}, Tipo: {deal.type}, Precio de apertura: {deal.price_open}, Precio de cierre: {deal.price_close}, Beneficio: {deal.profit}, Tiempo: {datetime.datetime.fromtimestamp(deal.time)}")
         
         return historial
+        '''
+        # Obtener las órdenes históricas, por ejemplo, del 1 de enero de 2023 al 31 de diciembre de 2023
+        from_date = datetime.datetime(2023, 1, 1)
+        to_date = datetime.datetime(2023, 12, 31)
+
+        # Obtener las transacciones históricas (history_orders_get)
+        history_orders = mt5.history_orders_get(from_date, to_date)
+
+        # Verificar si se obtuvieron datos
+        if history_orders is None:
+            print("No se pudieron obtener las órdenes históricas.")
+        else:
+            # Mostrar algunas de las órdenes históricas
+            for order in history_orders:
+                print(f"ID: {order.ticket}, Símbolo: {order.symbol}, Volumen: {order.volume}, Precio: {order.price_open}, Fecha de apertura: {order.time}")
+        return []
+
 
     # Calcular las ganancias y pérdidas del día
     def calcular_perdida_diaria(self,historial):
@@ -265,8 +282,6 @@ class MetaTrader5Broker():
         # Verificar el resultado de la ejecución de la orden
         if self._check_execution_status(result):
             print(f"{Utils.dateprint()} - Market Order {order_event.signal} para {order_event.symbol} de {order_event.volume} lotes ejecutada correctamente")
-            # Generar el execution event y añadirlo a la cola
-            self._create_and_put_execution_event(result)
         else:
             #Mandaremos un mensaje de error
             print(f"{Utils.dateprint()} - Ha habido un error al ejecutar la Market Order {order_event.signal} para {order_event.symbol}: {result.comment}")
