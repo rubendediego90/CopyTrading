@@ -8,6 +8,8 @@ from constantes.canals import CANALS
 from utils.groups_canals import CanalsYGroups
 from handlers.vlad_signals import VladSignal
 from brokers.MetaTrader5_broker import MetaTrader5Broker
+import datetime
+from utils.utils import Utils
 
 a = os.getenv("MT5_PATH")
 
@@ -35,9 +37,21 @@ chats_a_escuchar = [
     #int(GROUPS.RUPENS),
 ]
 
+last_day_balance = datetime.date(1990, 4, 21)
+last_cash_balance = 0.0
+
 
 @client.on(events.NewMessage(chats=chats_a_escuchar))
 async def manejador_mensajes(event):
+    global last_day_balance  # Usar la variable global
+    today = datetime.date.today()
+    brokerInstance = MetaTrader5Broker()
+    
+    if(last_day_balance == 0.0 or last_day_balance <= today):
+        last_day_balance = today
+        last_cash_balance = brokerInstance.getBalanceCash()
+        print(f"{Utils.dateprint()} - Reseteo fecha y guarda balance",last_cash_balance)
+        
     chat_id = event.chat_id  # 👈 ID del canal o grupo
     mensaje = event.raw_text
     await canalsYGroups.msgLog(event)
@@ -49,14 +63,13 @@ async def manejador_mensajes(event):
     print("es TEST?",chat_id == int(GROUPS.TEST))
     
     if chat_id == int(GROUPS.TEST):#CANALS.SIGNAL_VLAD: 
-        connectMetaTrader = MetaTrader5Broker()
-        vladSignal = VladSignal(connectMetaTrader)
-        vladSignal.handle(mensaje)
-        connectMetaTrader.disconnect()
+        vladSignal = VladSignal(brokerInstance)
+        vladSignal.handle(mensaje,last_cash_balance)
+        brokerInstance.disconnect()
     '''
     
     if chat_id == int(CANALS.SIGNAL_VLAD):#CANALS.SIGNAL_VLAD: 
-        vladSignal = VladSignal(connectMetaTrader)
+        vladSignal = VladSignal(brokerInstance)
         vladSignal.handle(mensaje)
     
     '''

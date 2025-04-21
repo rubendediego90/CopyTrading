@@ -3,13 +3,15 @@ import re
 from brokers.MetaTrader5_broker import MetaTrader5Broker
 from event.events import OrderEvent,OrderType,SignalType
 class VladSignal:
-    def __init__(self, connectMetaTrader : MetaTrader5Broker):
-        self.connectMetaTrader : MetaTrader5Broker = connectMetaTrader
+    def __init__(self, brokerInstance : MetaTrader5Broker):
+        self.brokerInstance : MetaTrader5Broker = brokerInstance
         pass
         
-    def handle(self,msg):
+    def handle(self,msg,last_cash_balance):
         print('*Vlad*',msg)
         symbol = self.getSymbol(msg)
+        FTMO_CONDITION_PERCENTAGE = 5
+        can_open_new_position = self.brokerInstance.can_open_new_position(last_cash_balance,FTMO_CONDITION_PERCENTAGE)
         if(symbol == None):
             print('mensaje sin identificar simbolo',msg)
             return
@@ -18,12 +20,9 @@ class VladSignal:
         
         orders_type = self.getOrderType(msg)
         
-        orders_open = self.connectMetaTrader.get_open_positions_by_symbol(symbol)
-        print('orders_open',orders_open)
-        
         if orders_type["hasMoveSL"]:
             print("ACTION - Mover SL")
-            self.connectMetaTrader.mover_stop_loss_be(symbol,"vlad")
+            self.brokerInstance.mover_stop_loss_be(symbol,"vlad")
             #mover el stop de las ordenes encontradas
 
             
@@ -32,16 +31,15 @@ class VladSignal:
         if orders_type["hasClosePartial"]:
             print("ACTION - Parcial")
             percentage = self.extraer_porcentaje(msg)
-            self.connectMetaTrader.close_partial(symbol,"vlad",partial=percentage)
+            self.brokerInstance.close_partial(symbol,"vlad",partial=percentage)
             
-        if orders_type["hasMoveSL"] or orders_type["hasClosePartial"]:
+        if orders_type["hasMoveSL"] or orders_type["hasClosePartial"] or can_open_new_position == False:
             return
         
         if orders_type["hasNewOrder"]:
             print("ACTION - Nueva orden")
             #TODO revisar historico
-            perdida = self.connectMetaTrader.calcular_perdida()
-            print("perdida diaria",perdida)
+
             
             valores = self.extraer_valores(msg)
             
@@ -50,12 +48,19 @@ class VladSignal:
                 print("Parametros importantes para la orden son nulos",valores)
                 return
             
-            lotes = self.connectMetaTrader.calc_lotes(symbol=symbol,sl=valores["SL"], entry=valores["Entrada"])
+            lotes = self.brokerInstance.calc_lotes(symbol=symbol,sl=valores["SL"], entry=valores["Entrada"])
             signalType:SignalType = SignalType.BUY if valores['isLong'] else SignalType.SELL
+            
+            
+            numTps = 1
+            if(valores['TP2'] != None): numTps = numTps + 1
+            if(valores['TP3'] != None): numTps = numTps + 1
+            
+            print("numTps",numTps)
                         
             order = OrderEvent(
                 symbol=symbol,
-                volume=lotes,
+                volume=lotes/numTps,
                 signal=signalType,
                 sl=valores['SL'],
                 tp=valores['TP1'],
@@ -63,13 +68,13 @@ class VladSignal:
                 comment=f"VLAD_{symbol}_TP1",
                 target_price=0.0 #TODO para buy limit y operaciones sin a mercado arreglar
                 )
-            self.connectMetaTrader.execute_order(order)
+            self.brokerInstance.execute_order(order)
             print("ORDER -1",order)
 
             if(valores['TP2'] != None):
                 order2 = OrderEvent(
                     symbol=symbol,
-                    volume=lotes,
+                    volume=lotes/numTps,
                     signal=signalType,
                     sl=valores['SL'],
                     tp=valores['TP2'],
@@ -77,14 +82,14 @@ class VladSignal:
                     comment=f"VLAD_{symbol}_TP2",
                     target_price=0.0 #TODO para buy limit y operaciones sin a mercado arreglar
                     )
-                self.connectMetaTrader.execute_order(order2)
+                self.brokerInstance.execute_order(order2)
                 print("ORDER - 2",order2)
                 
             
             if(valores['TP3'] != None):
                 order3 = OrderEvent(
                     symbol=symbol,
-                    volume=lotes,
+                    volume=lotes/numTps,
                     signal=signalType,
                     sl=valores['SL'],
                     tp=valores['TP3'],
@@ -92,7 +97,7 @@ class VladSignal:
                     comment=f"VLAD_{symbol}_TP3",
                     target_price=0.0 #TODO para buy limit y operaciones sin a mercado arreglar
                     )
-                self.connectMetaTrader.execute_order(order3)
+                self.brokerInstance.execute_order(order3)
                 print("ORDER - 3",order3)
             
             return

@@ -2,7 +2,7 @@ import MetaTrader5 as mt5
 import os
 from dotenv import load_dotenv, find_dotenv
 from utils.utils import Utils
-import datetime
+
 from event.events import OrderEvent
 
 class MetaTrader5Broker():
@@ -170,79 +170,6 @@ class MetaTrader5Broker():
         if(volumeFinal < symbol_info.volume_min): return symbol_info.volume_min
         return volumeFinal
     
-    def obtener_historial_operaciones(self):
-        '''
-        # Definir la fecha de hoy
-        fecha_hoy = datetime.datetime.now().date()
-        
-        # Convertir la fecha a timestamp UNIX para el rango de hoy (hora UTC)
-        desde_timestamp = datetime.datetime(fecha_hoy.year, fecha_hoy.month - 1, fecha_hoy.day)
-        hasta_timestamp = datetime.datetime(fecha_hoy.year, fecha_hoy.month +1 , fecha_hoy.day)
-        
-        # Convertir las fechas a timestamps (segundos desde la época UNIX)
-        #desde = int(desde_timestamp.timestamp())
-        #hasta = int(hasta_timestamp.timestamp())
-        
-        print("desde_timestamp**********", desde_timestamp)
-        print("hasta_timestamp**********", hasta_timestamp)
-        
-        # Intentar obtener las transacciones del día
-        historial = mt5.history_orders_get(from_time=desde_timestamp, to_time=hasta_timestamp)
-        
-        if historial is None or len(historial) == 0:
-            print("No se encontraron transacciones cerradas hoy.")
-            return []
-        
-        # Si hay historial, mostrar la información relevante
-        print(f"Se encontraron {len(historial)} transacciones cerradas.")
-        for deal in historial:
-            print(f"Ticket: {deal.ticket}, Símbolo: {deal.symbol}, Tipo: {deal.type}, Precio de apertura: {deal.price_open}, Precio de cierre: {deal.price_close}, Beneficio: {deal.profit}, Tiempo: {datetime.datetime.fromtimestamp(deal.time)}")
-        
-        return historial
-        '''
-        # Obtener las órdenes históricas, por ejemplo, del 1 de enero de 2023 al 31 de diciembre de 2023
-        from_date = datetime.datetime(2023, 1, 1)
-        to_date = datetime.datetime(2023, 12, 31)
-
-        # Obtener las transacciones históricas (history_orders_get)
-        history_orders = mt5.history_orders_get(from_date, to_date)
-
-        # Verificar si se obtuvieron datos
-        if history_orders is None:
-            print("No se pudieron obtener las órdenes históricas.")
-        else:
-            # Mostrar algunas de las órdenes históricas
-            for order in history_orders:
-                print(f"ID: {order.ticket}, Símbolo: {order.symbol}, Volumen: {order.volume}, Precio: {order.price_open}, Fecha de apertura: {order.time}")
-        return []
-
-
-    # Calcular las ganancias y pérdidas del día
-    def calcular_perdida_diaria(self,historial):
-        perdida_total = 0.0
-        for operacion in historial:
-            # Sumar las ganancias y pérdidas de las operaciones cerradas
-            perdida_total += operacion.profit
-        return perdida_total
-
-    # Función principal
-    def calcular_perdida(self):
-        # Obtener el historial de operaciones de hoy
-        historial = self.obtener_historial_operaciones()
-        
-        if len(historial) == 0:
-            print("No hubo operaciones hoy.")
-            return
-        
-        # Calcular la pérdida total
-        perdida_total = self.calcular_perdida_diaria(historial)
-        
-        # Mostrar el resultado
-        if perdida_total < 0:
-            print(f"Has perdido un total de {abs(perdida_total):.2f} USD hoy.")
-        else:
-            print(f"Has ganado un total de {perdida_total:.2f} USD hoy.")
-            
     def execute_order(self, order_event: OrderEvent) -> None:
 
         # Evaluamos el tipo de orden que se quiere ejecutar, y llamamos al método adecuado
@@ -263,13 +190,19 @@ class MetaTrader5Broker():
             order_type = mt5.ORDER_TYPE_SELL
         else:
             raise Exception(f"ORD EXEC: La señal {order_event.signal} no es válida")
+        
+        entry_price = 0.0
+        if order_event.signal == "BUY":
+            entry_price = mt5.symbol_info(order_event.symbol).ask
+        else:
+            entry_price = mt5.symbol_info(order_event.symbol).bid
 
         # Creación del market order request
         market_order_request = {
             "action": mt5.TRADE_ACTION_DEAL,
             "symbol": order_event.symbol,
             "volume": order_event.volume,
-            'price': mt5.symbol_info(order_event.symbol).bid,
+            'price': entry_price,
             "sl": order_event.sl,
             "tp": order_event.tp,
             "type": order_type,
@@ -400,5 +333,64 @@ class MetaTrader5Broker():
                 else:
                     # Mandaremos un mensaje de error
                     print(f"{Utils.dateprint()} - Ha habido un error al cerrar cerrar parcial de la posición {position.ticket} en {position.symbol} con volumen {nuevo_vol}: {result.comment}")
+    
+    def pesimist_balance_positions_open_and_pending(self):
+        # Obtener órdenes pendientes
+        pending_orders = mt5.orders_get()
+        # Obtener posiciones abiertas
+        open_positions = mt5.positions_get()
+
+        # Función para calcular pérdida potencial
+        def calc_stop_loss_loss(volume, open_price, sl_price, symbol, order_type):
+            contract_size = mt5.symbol_info(symbol).trade_contract_size
+            if order_type in [mt5.ORDER_TYPE_BUY, mt5.ORDER_TYPE_BUY_LIMIT, mt5.ORDER_TYPE_BUY_STOP]:
+                loss_per_point = (sl_price - open_price)
+            else:
+                loss_per_point = (open_price - sl_price)
+            return volume * contract_size * loss_per_point
+
+        # Calcular pérdida potencial de órdenes pendientes
+        loss_pending = 0
+        if pending_orders:
+            for order in pending_orders:
+                if order.sl != 0.0:
+                    loss = calc_stop_loss_loss(order.volume_current, order.price_open, order.sl, order.symbol, order.type)
+                    loss_pending += loss
+
+        # Calcular pérdida potencial de posiciones abiertas
+        loss_open = 0
+        if open_positions:
+            for pos in open_positions:
+                if pos.sl != 0.0:
+                    loss = calc_stop_loss_loss(pos.volume, pos.price_open, pos.sl, pos.symbol, pos.type)
+                    loss_open += loss
+        total = loss_pending + loss_open
+        #print(f"Pérdida potencial por órdenes pendientes yendo a SL: {loss_pending:.2f}")
+        #print(f"Pérdida potencial por posiciones abiertas yendo a SL: {loss_open:.2f}")
+        #print(f"Pérdida total potencial si todo va a SL: {(loss_pending + loss_open):.2f}")
+        
+        return total
+        
+    def getBalanceCash(self):
+        return self.account_info['balance']
+    
+    def can_open_new_position(self,last_cash_balance,percentage_max_down):
+        #Ver si llegamos a perder la cuenta
+        balance_open_pendings = self.pesimist_balance_positions_open_and_pending()
+
+        balance_postions_closed = self.getBalanceCash() - last_cash_balance + balance_open_pendings
+        ammount_max_to_loss = last_cash_balance * percentage_max_down / 100
+        
+                # se pone negativo porque el balance malo saldra negativo en la suma
+        can_open = ammount_max_to_loss > (-balance_postions_closed)
+        
+        print("BALANCE - PENDINGS",balance_open_pendings)
+        print("BALANCE - YESTERDAY",last_cash_balance)
+        print("BALANCE - TODAY",self.getBalanceCash())
+        print("BALANCE - Ammount max to loss",ammount_max_to_loss)
+        print("BALANCE CAN OPEN - ",can_open)
+
+        return can_open
+        
 
 
