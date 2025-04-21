@@ -41,7 +41,6 @@ class OrderEvent(BaseEvent):
     symbol: str
     signal: SignalType
     target_order: OrderType
-    target_price: float
     comment: str
     sl: float
     tp: float

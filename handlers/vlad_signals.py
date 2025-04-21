@@ -1,10 +1,11 @@
 from constantes.types import SYMBOLS_VLAD, SYMBOL
 import re
 from brokers.MetaTrader5_broker import MetaTrader5Broker
-from event.events import OrderEvent,OrderType,SignalType
+
 class VladSignal:
     def __init__(self, brokerInstance : MetaTrader5Broker):
         self.brokerInstance : MetaTrader5Broker = brokerInstance
+        self.RISK = 0.005
         pass
         
     def handle(self,msg,last_cash_balance):
@@ -23,10 +24,6 @@ class VladSignal:
         if orders_type["hasMoveSL"]:
             print("ACTION - Mover SL")
             self.brokerInstance.mover_stop_loss_be(symbol,"vlad")
-            #mover el stop de las ordenes encontradas
-
-            
-            pass
             
         if orders_type["hasClosePartial"]:
             print("ACTION - Parcial")
@@ -38,68 +35,12 @@ class VladSignal:
         
         if orders_type["hasNewOrder"]:
             print("ACTION - Nueva orden")
-            #TODO revisar historico
-
             
             valores = self.extraer_valores(msg)
-            
-            #validaciones 
-            if(valores["SL"] == None or valores["Entrada"] == None or valores["TP1"] == None):
-                print("Parametros importantes para la orden son nulos",valores)
-                return
-            
-            lotes = self.brokerInstance.calc_lotes(symbol=symbol,sl=valores["SL"], entry=valores["Entrada"])
-            signalType:SignalType = SignalType.BUY if valores['isLong'] else SignalType.SELL
-            
-            
-            numTps = 1
-            if(valores['TP2'] != None): numTps = numTps + 1
-            if(valores['TP3'] != None): numTps = numTps + 1
-            
-            print("numTps",numTps)
-                        
-            order = OrderEvent(
-                symbol=symbol,
-                volume=lotes/numTps,
-                signal=signalType,
-                sl=valores['SL'],
-                tp=valores['TP1'],
-                target_order=OrderType.MARKET,
-                comment=f"VLAD_{symbol}_TP1",
-                target_price=0.0 #TODO para buy limit y operaciones sin a mercado arreglar
-                )
-            self.brokerInstance.execute_order(order)
-            print("ORDER -1",order)
-
-            if(valores['TP2'] != None):
-                order2 = OrderEvent(
-                    symbol=symbol,
-                    volume=lotes/numTps,
-                    signal=signalType,
-                    sl=valores['SL'],
-                    tp=valores['TP2'],
-                    target_order=OrderType.MARKET,
-                    comment=f"VLAD_{symbol}_TP2",
-                    target_price=0.0 #TODO para buy limit y operaciones sin a mercado arreglar
-                    )
-                self.brokerInstance.execute_order(order2)
-                print("ORDER - 2",order2)
-                
-            
-            if(valores['TP3'] != None):
-                order3 = OrderEvent(
-                    symbol=symbol,
-                    volume=lotes/numTps,
-                    signal=signalType,
-                    sl=valores['SL'],
-                    tp=valores['TP3'],
-                    target_order=OrderType.MARKET,
-                    comment=f"VLAD_{symbol}_TP3",
-                    target_price=0.0 #TODO para buy limit y operaciones sin a mercado arreglar
-                    )
-                self.brokerInstance.execute_order(order3)
-                print("ORDER - 3",order3)
-            
+            tpList = [valores['TP1']]
+            if(valores['TP2'] != None):tpList.append(valores['TP2'])
+            if(valores['TP3'] != None):tpList.append(valores['TP3'])
+            self.brokerInstance.handle_order(valores=valores,symbol=symbol,risk=self.RISK,tpList=tpList,nombreStrategy="VLAD")
             return
 
     def getSymbol(self,msg):

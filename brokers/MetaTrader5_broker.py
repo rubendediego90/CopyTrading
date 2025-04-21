@@ -2,8 +2,7 @@ import MetaTrader5 as mt5
 import os
 from dotenv import load_dotenv, find_dotenv
 from utils.utils import Utils
-
-from event.events import OrderEvent
+from event.events import OrderEvent,OrderType,SignalType
 
 class MetaTrader5Broker():
     
@@ -130,9 +129,8 @@ class MetaTrader5Broker():
                     print(f"Tipo: {orden.type}")
                     print(f"Precio: {orden.price_open}")
                     
-    def calc_lotes(self,sl,entry,symbol):
+    def calc_lotes(self,sl,entry,symbol,numTP,risk):
         tamanio_contrato = None
-        risk = 0.005 #
         account_info = mt5.account_info()._asdict()
         balance = account_info['balance']
         #volumen = (balance * riesgo%) / (abs(precio_entrada - stop_loss) * tamaño_contrato)
@@ -158,7 +156,7 @@ class MetaTrader5Broker():
             tamanio_contrato = symbol_info.trade_contract_size
         
         # Cálculo del volumen
-        riesgo_dinero = balance * risk  # Riesgo en dinero
+        riesgo_dinero = balance * risk/numTP  # Riesgo en dinero
         diferencia_precio = abs(entry - sl)  # Diferencia de precio (Stop Loss - Entrada)
         volumen = riesgo_dinero / (diferencia_precio * tamanio_contrato)  # Cálculo del volumen
         
@@ -238,7 +236,6 @@ class MetaTrader5Broker():
             "sl": order_event.sl,
             "tp": order_event.tp,
             "type": order_type,
-            "price": order_event.target_price,
             "deviation": 0,
             "comment": order_event.comment,
             "type_filling": mt5.ORDER_FILLING_FOK,
@@ -391,6 +388,101 @@ class MetaTrader5Broker():
         print("BALANCE CAN OPEN - ",can_open)
 
         return can_open
+    
+    def handle_order(self,valores, symbol,risk,tpList,nombreStrategy):
+        #validaciones 
+        if(valores["SL"] == None or valores["Entrada"] == None or valores["TP1"] == None):
+            print("Parametros importantes para la orden son nulos",valores)
+            return
+        
+        numTps = len(tpList)
+        lotes = self.calc_lotes(symbol=symbol,sl=valores["SL"], entry=valores["Entrada"],risk=risk,numTP=numTps)
+        signalType:SignalType = SignalType.BUY if valores['isLong'] else SignalType.SELL
+        
+        i = 0
+        for tp in tpList:
+            i = i +1
+            order = OrderEvent(
+                symbol=symbol,
+                volume=lotes,
+                signal=signalType,
+                sl=valores['SL'],
+                tp=valores[f"TP{i}"],
+                target_order=OrderType.MARKET,
+                comment=f"{nombreStrategy}_{symbol}_TP{i}",
+                )
+            self.execute_order(order)
+            print(f"ORDER - {i}",order)
+        
+        #self.handle_order_pending(symbol)
+    
+    def handle_order_pending(self,symbol):
+        NUM_ORDERS = 3
+        RISK_PERCENT = 0.5  # % de riesgo por operación
+        STOP_LOSS_PRICE = 3350.0  # SL absoluto (ej. 2000)
+        PRICE_MIN = 3380
+        PRICE_MAX = 3450
+        take_profits = [3500.0, 3510.0, 3520.0]  # TPs por entrada
+
+        # === CALCULAR PRECIOS DE ENTRADA ===
+        step = (PRICE_MAX - PRICE_MIN) / (NUM_ORDERS - 1)
+        entry_prices = [round(PRICE_MIN + i * step, 2) for i in range(NUM_ORDERS)]
+        
+        # === ENVÍO DE ÓRDENES PENDIENTES ===
+        def send_pending_order(order_type, entry_price, sl_price, tp_price, lot):
+            request = {
+                "action": mt5.TRADE_ACTION_PENDING,
+                "symbol": symbol,
+                "volume": lot,
+                "type": order_type,
+                "price": entry_price,
+                "sl": sl_price,
+                "tp": tp_price,
+                "magic": 123456,
+                "deviation": 10,
+                "type_time": mt5.ORDER_TIME_GTC,
+                "type_filling": mt5.ORDER_FILLING_RETURN,
+                "comment": "AutoOrder"
+            }
+            result = mt5.order_send(request)
+            if result.retcode != mt5.TRADE_RETCODE_DONE:
+                print(f"❌ Error en orden {order_type} @ {entry_price}: {result.comment}")
+            else:
+                print(f"✅ {order_type} enviada: {entry_price}, lote: {lot}, SL: {sl_price}, TP: {tp_price}")
+
+        # === ENVIAR TODAS LAS ÓRDENES ===
+        tick = mt5.symbol_info_tick(symbol)
+        current_ask = tick.ask
+        current_bid = tick.bid
+
+        ordenes_registradas = []
+
+        for i, entry in enumerate(entry_prices):
+            tp = take_profits[i]
+            lot = self.calc_lotes(entry=entry, sl=STOP_LOSS_PRICE,risk=RISK_PERCENT,numTP=len(take_profits), symbol=symbol)
+
+            if entry > current_ask:
+                send_pending_order(mt5.ORDER_TYPE_BUY_STOP, entry, STOP_LOSS_PRICE, tp, lot)
+                ordenes_registradas.append(("BUY STOP", entry, STOP_LOSS_PRICE, tp, lot))
+            elif entry < current_ask:
+                send_pending_order(mt5.ORDER_TYPE_BUY_LIMIT, entry, STOP_LOSS_PRICE, tp, lot)
+                ordenes_registradas.append(("BUY LIMIT", entry, STOP_LOSS_PRICE, tp, lot))
+
+            if entry < current_bid:
+                send_pending_order(mt5.ORDER_TYPE_SELL_STOP, entry, STOP_LOSS_PRICE, tp, lot)
+                ordenes_registradas.append(("SELL STOP", entry, STOP_LOSS_PRICE, tp, lot))
+            elif entry > current_bid:
+                send_pending_order(mt5.ORDER_TYPE_SELL_LIMIT, entry, STOP_LOSS_PRICE, tp, lot)
+                ordenes_registradas.append(("SELL LIMIT", entry, STOP_LOSS_PRICE, tp, lot))
+
+        # === IMPRIMIR RESUMEN DE ÓRDENES ===
+        print("\n📝 RESUMEN FINAL DE ÓRDENES:\n")
+        print(f"{'Tipo':<12} {'Entrada':<10} {'SL':<10} {'TP':<10} {'Lote':<6}")
+        print("-" * 55)
+
+        for orden in ordenes_registradas:
+            tipo, entrada, sl, tp, lot = orden
+            print(f"{tipo:<12} {entrada:<10} {sl:<10} {tp:<10} {lot:<6}")
         
 
 
