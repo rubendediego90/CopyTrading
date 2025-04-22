@@ -174,9 +174,6 @@ class MetaTrader5Broker():
         if order_event.target_order == "MARKET":
             # Llamamos al método que ejecuta órdenes a mercado
             self._execute_market_order(order_event)
-        else:
-            # Llamamos al método que coloque órdenes pendientes
-            self._send_pending_order(order_event)
 
     def _execute_market_order(self, order_event: OrderEvent) -> None:
         # Comprobamos si la orden es de compra o de venta
@@ -219,33 +216,6 @@ class MetaTrader5Broker():
             #Mandaremos un mensaje de error
             print(f"{Utils.dateprint()} - Ha habido un error al ejecutar la Market Order {order_event.signal} para {order_event.symbol}: {result.comment}")
 
-    def _send_pending_order(self, order_event: OrderEvent) -> None:
-        # Comprobar si es de tipo STOP o de tipo LIMITE
-        if order_event.target_order == "STOP":
-            order_type = mt5.ORDER_TYPE_BUY_STOP if order_event.signal == "BUY" else mt5.ORDER_TYPE_SELL_STOP
-        elif order_event.target_order == "LIMIT":
-            order_type = mt5.ORDER_TYPE_BUY_LIMIT if order_event.signal == "BUY" else mt5.ORDER_TYPE_SELL_LIMIT
-        else:
-            raise Exception(f"ORD EXEC: La orden pendiente objetivo {order_event.target_order} no es válida")
-        
-        # Creación de la pending order request
-        pending_order_request = {
-            "action": mt5.TRADE_ACTION_PENDING,
-            "symbol": order_event.symbol,
-            "volume": order_event.volume,
-            "sl": order_event.sl,
-            "tp": order_event.tp,
-            "type": order_type,
-            "deviation": 0,
-            "comment": order_event.comment,
-            "type_filling": mt5.ORDER_FILLING_FOK,
-            "type_time": mt5.ORDER_TIME_GTC
-        }
-
-        # Mandamos el trade request para colocar la orden pendiente
-        result = mt5.order_send(pending_order_request)
-        
-        
     def _check_execution_status(self, order_result) -> bool:
         if order_result.retcode == mt5.TRADE_RETCODE_DONE:
             # todo ha ido bien
@@ -296,8 +266,6 @@ class MetaTrader5Broker():
         # Obtener las posiciones activas
         positions = mt5.positions_get()
         
-        print("")
-
         if positions is None or len(positions) == 0:
             print("No hay posiciones activas")
             return
@@ -331,6 +299,33 @@ class MetaTrader5Broker():
                     # Mandaremos un mensaje de error
                     print(f"{Utils.dateprint()} - Ha habido un error al cerrar cerrar parcial de la posición {position.ticket} en {position.symbol} con volumen {nuevo_vol}: {result.comment}")
     
+    def close_pending(self, symbol, comentario_buscado):
+    # Obtener las órdenes pendientes
+        orders = mt5.orders_get()
+
+        if orders is None or len(orders) == 0:
+            print("No hay órdenes pendientes")
+            return
+
+        # Buscar la orden que deseas eliminar
+        for order in orders:
+            if order.symbol == symbol and comentario_buscado.lower() in order.comment.lower():
+                # Crear el dict para eliminar la orden
+                cancel_request = {
+                    'action': mt5.TRADE_ACTION_REMOVE,
+                    'order': order.ticket,
+                    'symbol': order.symbol,
+                    'comment': order.comment
+                }
+
+                # Enviar la solicitud para eliminar la orden
+                result = mt5.order_send(cancel_request)
+
+                if self._check_execution_status(result):
+                    print(f"{Utils.dateprint()} - Orden pendiente con ticket {order.ticket} en {order.symbol} ha sido eliminada correctamente")
+                else:
+                    print(f"{Utils.dateprint()} - Error al eliminar la orden pendiente {order.ticket} en {order.symbol}: {result.comment}")
+        
     def pesimist_balance_positions_open_and_pending(self):
         # Obtener órdenes pendientes
         pending_orders = mt5.orders_get()
@@ -415,6 +410,9 @@ class MetaTrader5Broker():
                 print(f"✅ ORDER - TP{i}:", order)
 
         tick = mt5.symbol_info_tick(symbol)
+        if(tick == None):
+            print("tick en mt5 class is None",tick)
+            return
         current_ask = tick.ask
         current_bid = tick.bid
         
@@ -456,7 +454,7 @@ class MetaTrader5Broker():
         
     
     def handle_order_pending(self,symbol,risk,sl,tpList,rango_superior,rango_inferior,isShort,isLong):
-        NUM_ORDERS = 3 #TODO sacar fuera
+        NUM_ORDERS = 5 #TODO sacar fuera
         RISK_PERCENT = risk  # % de riesgo por operación
         STOP_LOSS_PRICE = sl # SL absoluto (ej. 2000)
         PRICE_MIN = rango_inferior
@@ -466,6 +464,14 @@ class MetaTrader5Broker():
         # === CALCULAR PRECIOS DE ENTRADA ===
         step = (PRICE_MAX - PRICE_MIN) / (NUM_ORDERS - 1)
         entry_prices = [round(PRICE_MIN + i * step, 2) for i in range(NUM_ORDERS)]
+        
+        #si llega al extremo contrario no seria buena señal, se elimina para distribuir mejor los lotes
+        if isShort and entry_prices:
+            entry_prices.remove(min(entry_prices))
+
+        if isLong and entry_prices:
+            entry_prices.remove(max(entry_prices))
+        
         print("entry_prices",entry_prices)
         
         # === ENVÍO DE ÓRDENES PENDIENTES ===

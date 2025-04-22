@@ -101,7 +101,7 @@ class VladSignal:
             "1-)": r"\b1-\)\s*([\d.,]+[KkMmBb]?)",
             "2-)": r"\b2-\)\s*([\d.,]+[KkMmBb]?)",
             "3-)": r"\b3-\)\s*([\d.,]+[KkMmBb]?)",
-            "Entrada": r"\b(?:Entrada|Long|Short)[:\-]?\s*([\d.,]+[KkMmBb]?)",
+            "Entry": r"\b(?:Entrada|Long|Short)[:\-]?\s*([\d.,]+[KkMmBb]?)",
             "rango":r"([\d.,]+[KkMmBb]?)\s*(?:a|-|~)\s*([\d.,]+[KkMmBb]?)"
         }
 

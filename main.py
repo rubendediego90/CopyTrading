@@ -83,11 +83,8 @@ async def manejador_mensajes(event):
     
     if chat_id == int(CANALS.SIGNAL_VLAD):#CANALS.SIGNAL_VLAD: 
         vladSignal = VladSignal(brokerInstance)
-        vladSignal.handle(mensaje)
+        vladSignal.handle(mensaje,last_cash_balance)
         brokerInstance.disconnect()    
-
-    
-            
 
 print("📡 Escuchando grupos y canales...")
 client.run_until_disconnected()
