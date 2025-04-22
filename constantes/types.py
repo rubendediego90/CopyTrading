@@ -17,6 +17,12 @@ class SYMBOLS_VLAD(str,Enum):
     ETH = "#ETH"
     SP500 = "#SP500"
     NASDAQ = "#NAS"
+    
+class SYMBOLS_SNIPERS_GOLD(str,Enum):
+    XAU = "XAU"
+    XAUUSD = "XAUUSD"
+    BTC = "BTC"
+    BITCOIN = "BITCOIN"
 
     
 

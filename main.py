@@ -7,6 +7,7 @@ from constantes.grupos import GROUPS
 from constantes.canals import CANALS
 from utils.groups_canals import CanalsYGroups
 from handlers.vlad_signals import VladSignal
+from handlers.sinpers_gold import SnipersGold
 from brokers.MetaTrader5_broker import MetaTrader5Broker
 import datetime
 from utils.utils import Utils
@@ -32,6 +33,7 @@ chats_a_escuchar = [
     int(CANALS.BIT_LOBO),
     int(CANALS.SIGNAL_VLAD),
     int(CANALS.CRIPTO_SENIALES),
+    int(CANALS.SNIPERS_GOLD),
     int(GROUPS.TEST),
     #int(GROUPS.VLAD_DUDAS),
     #int(GROUPS.RUPENS),
@@ -60,19 +62,26 @@ async def manejador_mensajes(event):
     print("es lobo?",chat_id == int(CANALS.BIT_LOBO))
     print("es vlad?",chat_id == int(CANALS.SIGNAL_VLAD))
     print("es señales nuevo?",chat_id == int(CANALS.CRIPTO_SENIALES))
+    print("esgold?",chat_id == int(CANALS.SNIPERS_GOLD))
     print("es TEST?",chat_id == int(GROUPS.TEST))
     
-    if chat_id == int(GROUPS.TEST):#CANALS.SIGNAL_VLAD: 
-        vladSignal = VladSignal(brokerInstance)
+    
+    if chat_id == int(GROUPS.TEST):#CANALS.SNIPERS_GOLD: 
+        vladSignal = SnipersGold(brokerInstance)
         vladSignal.handle(mensaje,last_cash_balance)
         brokerInstance.disconnect()
-    '''
+        
+        
+    if chat_id == int(CANALS.SNIPERS_GOLD):#CANALS.SNIPERS_GOLD: 
+        vladSignal = SnipersGold(brokerInstance)
+        vladSignal.handle(mensaje,last_cash_balance)
+        brokerInstance.disconnect()    
     
     if chat_id == int(CANALS.SIGNAL_VLAD):#CANALS.SIGNAL_VLAD: 
         vladSignal = VladSignal(brokerInstance)
         vladSignal.handle(mensaje)
+
     
-    '''
             
 
 print("📡 Escuchando grupos y canales...")

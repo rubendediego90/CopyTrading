@@ -390,43 +390,104 @@ class MetaTrader5Broker():
         return can_open
     
     def handle_order(self,valores, symbol,risk,tpList,nombreStrategy):
-        #validaciones 
-        if(valores["SL"] == None or valores["Entrada"] == None or valores["TP1"] == None):
-            print("Parametros importantes para la orden son nulos",valores)
-            return
+        print("hanle order",valores)
+        hasRange = valores["rango_inferior"] != None and valores["rango_superior"] != None
         
         numTps = len(tpList)
-        lotes = self.calc_lotes(symbol=symbol,sl=valores["SL"], entry=valores["Entrada"],risk=risk,numTP=numTps)
-        signalType:SignalType = SignalType.BUY if valores['isLong'] else SignalType.SELL
+        if(hasRange == False):
+
+                
+            
+            lotes = self.calc_lotes(symbol=symbol,sl=valores["SL"], entry=valores["Entrada"],risk=risk,numTP=numTps)
+            signalType:SignalType = SignalType.BUY if valores['isLong'] else SignalType.SELL
+            
+            i = 0
+            for tp in tpList:
+                i = i +1
+                order = OrderEvent(
+                    symbol=symbol,
+                    volume=lotes,
+                    signal=signalType,
+                    sl=valores['SL'],
+                    tp=valores[f"TP{i}"],
+                    target_order=OrderType.MARKET,
+                    comment=f"{nombreStrategy}_{symbol}_TP{i}",
+                    )
+                self.execute_order(order)
+                print(f"ORDER - {i}",order)
+        else : 
+            rango_superior = valores["rango_superior"] if valores["rango_superior"] > valores["rango_inferior"] else valores["rango_inferior"]
+            rango_inferior = valores["rango_inferior"] if valores["rango_inferior"] < valores["rango_superior"] else valores["rango_superior"]
+            
+            tick = mt5.symbol_info_tick(symbol)
+            current_ask = tick.ask
+            current_bid = tick.bid
+            
+            if(valores['isLong']):
+                if rango_inferior <= current_ask <= rango_superior:
+                    lotes = self.calc_lotes(symbol=symbol,sl=valores["SL"], entry=valores["Entrada"],risk=risk,numTP=numTps)
+                    signalType:SignalType = SignalType.BUY if valores['isLong'] else SignalType.SELL
+                    
+                    i = 0
+                    for tp in tpList:
+                        i = i +1
+                        order = OrderEvent(
+                            symbol=symbol,
+                            volume=lotes,
+                            signal=signalType,
+                            sl=valores['SL'],
+                            tp=valores[f"TP{i}"],
+                            target_order=OrderType.MARKET,
+                            comment=f"{nombreStrategy}_{symbol}_TP{i}",
+                            )
+                        self.execute_order(order)
+                        print(f"ORDER - {i}",order)
+                return
+            
+            if(valores['isShort']):
+                if rango_inferior <= current_bid <= rango_superior:
+                    lotes = self.calc_lotes(symbol=symbol,sl=valores["SL"], entry=valores["Entrada"],risk=risk,numTP=numTps)
+                    signalType:SignalType = SignalType.BUY if valores['isLong'] else SignalType.SELL
+                    
+                    i = 0
+                    for tp in tpList:
+                        i = i +1
+                        order = OrderEvent(
+                            symbol=symbol,
+                            volume=lotes,
+                            signal=signalType,
+                            sl=valores['SL'],
+                            tp=valores[f"TP{i}"],
+                            target_order=OrderType.MARKET,
+                            comment=f"{nombreStrategy}_{symbol}_TP{i}",
+                            )
+                        self.execute_order(order)
+                        print(f"ORDER - {i}",order)
+                return
+
+            self.handle_order_pending(symbol=symbol,
+                                         risk=risk,
+                                         sl=valores['SL'],
+                                         rango_superior=rango_superior,
+                                         rango_inferior=rango_inferior,
+                                         tpList=tpList,
+                                         isLong=valores["isLong"],
+                                         isShort=valores["isShort"],
+                                         )
         
-        i = 0
-        for tp in tpList:
-            i = i +1
-            order = OrderEvent(
-                symbol=symbol,
-                volume=lotes,
-                signal=signalType,
-                sl=valores['SL'],
-                tp=valores[f"TP{i}"],
-                target_order=OrderType.MARKET,
-                comment=f"{nombreStrategy}_{symbol}_TP{i}",
-                )
-            self.execute_order(order)
-            print(f"ORDER - {i}",order)
-        
-        #self.handle_order_pending(symbol)
     
-    def handle_order_pending(self,symbol):
-        NUM_ORDERS = 3
-        RISK_PERCENT = 0.5  # % de riesgo por operación
-        STOP_LOSS_PRICE = 3350.0  # SL absoluto (ej. 2000)
-        PRICE_MIN = 3380
-        PRICE_MAX = 3450
-        take_profits = [3500.0, 3510.0, 3520.0]  # TPs por entrada
+    def handle_order_pending(self,symbol,risk,sl,tpList,rango_superior,rango_inferior,isShort,isLong):
+        NUM_ORDERS = 3 #TODO sacar fuera
+        RISK_PERCENT = risk  # % de riesgo por operación
+        STOP_LOSS_PRICE = sl # SL absoluto (ej. 2000)
+        PRICE_MIN = rango_inferior
+        PRICE_MAX = rango_superior
+        take_profits = tpList  # TPs por entrada
 
         # === CALCULAR PRECIOS DE ENTRADA ===
         step = (PRICE_MAX - PRICE_MIN) / (NUM_ORDERS - 1)
         entry_prices = [round(PRICE_MIN + i * step, 2) for i in range(NUM_ORDERS)]
+        print("entry_prices",entry_prices)
         
         # === ENVÍO DE ÓRDENES PENDIENTES ===
         def send_pending_order(order_type, entry_price, sl_price, tp_price, lot):
@@ -446,7 +507,7 @@ class MetaTrader5Broker():
             }
             result = mt5.order_send(request)
             if result.retcode != mt5.TRADE_RETCODE_DONE:
-                print(f"❌ Error en orden {order_type} @ {entry_price}: {result.comment}")
+                print(f"❌ Error: {result.comment} enviada: {entry_price}, lote: {lot}, SL: {sl_price}, TP: {tp_price}")
             else:
                 print(f"✅ {order_type} enviada: {entry_price}, lote: {lot}, SL: {sl_price}, TP: {tp_price}")
 
@@ -457,23 +518,25 @@ class MetaTrader5Broker():
 
         ordenes_registradas = []
 
-        for i, entry in enumerate(entry_prices):
-            tp = take_profits[i]
-            lot = self.calc_lotes(entry=entry, sl=STOP_LOSS_PRICE,risk=RISK_PERCENT,numTP=len(take_profits), symbol=symbol)
+        for entry in entry_prices:
+            for tp in take_profits:
+                lot = self.calc_lotes(entry=entry, sl=STOP_LOSS_PRICE,risk=RISK_PERCENT / (len(entry_prices)),numTP=len(take_profits), symbol=symbol)
 
-            if entry > current_ask:
-                send_pending_order(mt5.ORDER_TYPE_BUY_STOP, entry, STOP_LOSS_PRICE, tp, lot)
-                ordenes_registradas.append(("BUY STOP", entry, STOP_LOSS_PRICE, tp, lot))
-            elif entry < current_ask:
-                send_pending_order(mt5.ORDER_TYPE_BUY_LIMIT, entry, STOP_LOSS_PRICE, tp, lot)
-                ordenes_registradas.append(("BUY LIMIT", entry, STOP_LOSS_PRICE, tp, lot))
+                # === BUY PENDINGS ===
+                if entry > current_ask and isLong:
+                    send_pending_order(mt5.ORDER_TYPE_BUY_STOP, entry, STOP_LOSS_PRICE, tp, lot)
+                    ordenes_registradas.append(("BUY STOP", entry, STOP_LOSS_PRICE, tp, lot))
+                elif entry < current_ask and isLong:
+                    send_pending_order(mt5.ORDER_TYPE_BUY_LIMIT, entry, STOP_LOSS_PRICE, tp, lot)
+                    ordenes_registradas.append(("BUY LIMIT", entry, STOP_LOSS_PRICE, tp, lot))
 
-            if entry < current_bid:
-                send_pending_order(mt5.ORDER_TYPE_SELL_STOP, entry, STOP_LOSS_PRICE, tp, lot)
-                ordenes_registradas.append(("SELL STOP", entry, STOP_LOSS_PRICE, tp, lot))
-            elif entry > current_bid:
-                send_pending_order(mt5.ORDER_TYPE_SELL_LIMIT, entry, STOP_LOSS_PRICE, tp, lot)
-                ordenes_registradas.append(("SELL LIMIT", entry, STOP_LOSS_PRICE, tp, lot))
+                # === SELL PENDINGS ===
+                if entry < current_bid and isShort:
+                    send_pending_order(mt5.ORDER_TYPE_SELL_STOP, entry, STOP_LOSS_PRICE, tp, lot)
+                    ordenes_registradas.append(("SELL STOP", entry, STOP_LOSS_PRICE, tp, lot))
+                elif entry > current_bid and isShort:
+                    send_pending_order(mt5.ORDER_TYPE_SELL_LIMIT, entry, STOP_LOSS_PRICE, tp, lot)
+                    ordenes_registradas.append(("SELL LIMIT", entry, STOP_LOSS_PRICE, tp, lot))
 
         # === IMPRIMIR RESUMEN DE ÓRDENES ===
         print("\n📝 RESUMEN FINAL DE ÓRDENES:\n")
