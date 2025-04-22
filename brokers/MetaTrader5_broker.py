@@ -389,91 +389,70 @@ class MetaTrader5Broker():
 
         return can_open
     
-    def handle_order(self,valores, symbol,risk,tpList,nombreStrategy):
-        print("hanle order",valores)
-        hasRange = valores["rango_inferior"] != None and valores["rango_superior"] != None
+    def handle_order(self, valores, symbol, risk, tpList, nombreStrategy):
+        print("handle_order", valores)
+        #Cierra ordenes anteriores con mismo comentario
+        self.close_partial(symbol,comentario_buscado=nombreStrategy,partial=100)
         
-        numTps = len(tpList)
-        if(hasRange == False):
+        has_range = valores["rango_inferior"] is not None and valores["rango_superior"] is not None
+        num_tps = len(tpList)
+        is_long = valores["isLong"]
+        is_short = valores["isShort"]
+        stop_loss = valores["SL"]
 
-                
-            
-            lotes = self.calc_lotes(symbol=symbol,sl=valores["SL"], entry=valores["Entrada"],risk=risk,numTP=numTps)
-            signalType:SignalType = SignalType.BUY if valores['isLong'] else SignalType.SELL
-            
-            i = 0
-            for tp in tpList:
-                i = i +1
+        def enviar_ordenes_market(lotes, signal_type):
+            for i, tp in enumerate(tpList, start=1):
                 order = OrderEvent(
                     symbol=symbol,
                     volume=lotes,
-                    signal=signalType,
-                    sl=valores['SL'],
-                    tp=valores[f"TP{i}"],
+                    signal=signal_type,
+                    sl=stop_loss,
+                    tp=valores.get(f"TP{i}", tp),
                     target_order=OrderType.MARKET,
                     comment=f"{nombreStrategy}_{symbol}_TP{i}",
-                    )
+                )
                 self.execute_order(order)
-                print(f"ORDER - {i}",order)
-        else : 
-            rango_superior = valores["rango_superior"] if valores["rango_superior"] > valores["rango_inferior"] else valores["rango_inferior"]
-            rango_inferior = valores["rango_inferior"] if valores["rango_inferior"] < valores["rango_superior"] else valores["rango_superior"]
-            
-            tick = mt5.symbol_info_tick(symbol)
-            current_ask = tick.ask
-            current_bid = tick.bid
-            
-            if(valores['isLong']):
-                if rango_inferior <= current_ask <= rango_superior:
-                    lotes = self.calc_lotes(symbol=symbol,sl=valores["SL"], entry=valores["Entrada"],risk=risk,numTP=numTps)
-                    signalType:SignalType = SignalType.BUY if valores['isLong'] else SignalType.SELL
-                    
-                    i = 0
-                    for tp in tpList:
-                        i = i +1
-                        order = OrderEvent(
-                            symbol=symbol,
-                            volume=lotes,
-                            signal=signalType,
-                            sl=valores['SL'],
-                            tp=valores[f"TP{i}"],
-                            target_order=OrderType.MARKET,
-                            comment=f"{nombreStrategy}_{symbol}_TP{i}",
-                            )
-                        self.execute_order(order)
-                        print(f"ORDER - {i}",order)
-                return
-            
-            if(valores['isShort']):
-                if rango_inferior <= current_bid <= rango_superior:
-                    lotes = self.calc_lotes(symbol=symbol,sl=valores["SL"], entry=valores["Entrada"],risk=risk,numTP=numTps)
-                    signalType:SignalType = SignalType.BUY if valores['isLong'] else SignalType.SELL
-                    
-                    i = 0
-                    for tp in tpList:
-                        i = i +1
-                        order = OrderEvent(
-                            symbol=symbol,
-                            volume=lotes,
-                            signal=signalType,
-                            sl=valores['SL'],
-                            tp=valores[f"TP{i}"],
-                            target_order=OrderType.MARKET,
-                            comment=f"{nombreStrategy}_{symbol}_TP{i}",
-                            )
-                        self.execute_order(order)
-                        print(f"ORDER - {i}",order)
-                return
+                print(f"✅ ORDER - TP{i}:", order)
 
-            self.handle_order_pending(symbol=symbol,
-                                         risk=risk,
-                                         sl=valores['SL'],
-                                         rango_superior=rango_superior,
-                                         rango_inferior=rango_inferior,
-                                         tpList=tpList,
-                                         isLong=valores["isLong"],
-                                         isShort=valores["isShort"],
-                                         )
+        tick = mt5.symbol_info_tick(symbol)
+        current_ask = tick.ask
+        current_bid = tick.bid
+        
+        if not has_range:
+            entry_price_calc = current_ask if is_long else current_bid
+            lotes = self.calc_lotes(symbol=symbol, sl=stop_loss, entry=entry_price_calc, risk=risk, numTP=num_tps)
+            signal_type = SignalType.BUY if is_long else SignalType.SELL
+            enviar_ordenes_market(lotes, signal_type)
+            return
+
+        # Tiene rango: asegurar que rango_inferior < rango_superior
+        rango_inferior = min(valores["rango_inferior"], valores["rango_superior"])
+        rango_superior = max(valores["rango_inferior"], valores["rango_superior"])
+        
+        # Entrar al mercado si el precio está dentro del rango
+        signal_type = SignalType.BUY if is_long else SignalType.SELL
+
+        if is_long and rango_inferior <= current_ask <= rango_superior:
+            lotes = self.calc_lotes(symbol=symbol, sl=stop_loss, entry=current_ask, risk=risk, numTP=num_tps)
+            enviar_ordenes_market(lotes, signal_type)
+            return
+
+        if is_short and rango_inferior <= current_bid <= rango_superior:
+            lotes = self.calc_lotes(symbol=symbol, sl=stop_loss, entry=current_bid, risk=risk, numTP=num_tps)
+            enviar_ordenes_market(lotes, signal_type)
+            return
+
+        # Si no está en el rango, dejar orden pendiente
+        self.handle_order_pending(
+            symbol=symbol,
+            risk=risk,
+            sl=stop_loss,
+            rango_superior=rango_superior,
+            rango_inferior=rango_inferior,
+            tpList=tpList,
+            isLong=is_long,
+            isShort=is_short,
+        )
         
     
     def handle_order_pending(self,symbol,risk,sl,tpList,rango_superior,rango_inferior,isShort,isLong):
