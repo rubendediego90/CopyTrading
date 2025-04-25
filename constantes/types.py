@@ -23,6 +23,12 @@ class SYMBOLS_SNIPERS_GOLD(str,Enum):
     XAUUSD = "XAUUSD"
     BTC = "BTC"
     BITCOIN = "BITCOIN"
+    
+class PTJG_GOLD(str,Enum):
+    ORO = "ORO"
+    GOLD = "GOLD"
+    XAU = "XAU"
+    XAUUSD = "XAUUSD"
 
     
 

@@ -9,6 +9,7 @@ from constantes.canals import CANALS
 from utils.groups_canals import CanalsYGroups
 from handlers.vlad_signals import VladSignal
 from handlers.sinpers_gold import SnipersGold
+from handlers.ptjg_gold import PtjgGold
 from brokers.MetaTrader5_broker import MetaTrader5Broker
 from utils.utils import Utils
 
@@ -31,7 +32,8 @@ chats_a_escuchar = [
     int(CANALS.SIGNAL_VLAD),
     int(CANALS.CRIPTO_SENIALES),
     int(CANALS.SNIPERS_GOLD_VIP),
-    int(CANALS.SNIPERS_GOLD_PUBLIC),
+    int(CANALS.PTJG_GOLD_PUBLIC),
+    #int(CANALS.SNIPERS_GOLD_PUBLIC),
     int(GROUPS.TEST),
 ]
 
@@ -59,11 +61,13 @@ async def manejador_mensajes(event):
     print("es señales nuevo?", chat_id == int(CANALS.CRIPTO_SENIALES))
     print("esgold vip?", chat_id == int(CANALS.SNIPERS_GOLD_VIP))
     print("esgold public?", chat_id == int(CANALS.SNIPERS_GOLD_PUBLIC))
+    print("es ptjg public?", chat_id == int(CANALS.PTJG_GOLD_PUBLIC))
     print("es TEST?", chat_id == int(GROUPS.TEST))
 
     if chat_id == int(GROUPS.TEST):
-        SnipersGold(brokerInstance, "SNIPERS_GOLD_PUB").handle(mensaje, last_cash_balance)
-        VladSignal(brokerInstance).handle(mensaje, last_cash_balance)
+        #SnipersGold(brokerInstance, "SNIPERS_GOLD_PUB").handle(mensaje, last_cash_balance)
+        #VladSignal(brokerInstance).handle(mensaje, last_cash_balance)
+        PtjgGold(brokerInstance,"PTJG_GOLD_PUB").handle(mensaje, last_cash_balance)
         #SnipersGold(brokerInstance, "SNIPERS_GOLD_VIP").handle(mensaje, last_cash_balance)
 
     if chat_id == int(CANALS.SNIPERS_GOLD_VIP):
@@ -71,6 +75,9 @@ async def manejador_mensajes(event):
 
     if chat_id == int(CANALS.SNIPERS_GOLD_PUBLIC):
         SnipersGold(brokerInstance, "SNIPERS_GOLD_PUB").handle(mensaje, last_cash_balance)
+        
+    if chat_id == int(CANALS.PTJG_GOLD_PUBLIC):
+        PtjgGold(brokerInstance, "PTJG_GOLD_PUB").handle(mensaje, last_cash_balance)
 
     if chat_id == int(CANALS.SIGNAL_VLAD):
         VladSignal(brokerInstance).handle(mensaje, last_cash_balance)
