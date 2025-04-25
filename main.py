@@ -80,7 +80,7 @@ async def manejador_mensajes(event):
         PtjgGold(brokerInstance, "PTJG_GOLD_PUB").handle(mensaje, last_cash_balance)
 
     if chat_id == int(CANALS.SIGNAL_VLAD):
-        VladSignal(brokerInstance).handle(mensaje, last_cash_balance)
+        VladSignal(brokerInstance,"VLAD").handle(mensaje, last_cash_balance)
 
 # ✅ HILO SECUNDARIO – imprime mensaje cada 5 segundos
 def bucle_mensajes():

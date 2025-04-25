@@ -4,9 +4,10 @@ from brokers.MetaTrader5_broker import MetaTrader5Broker
 from utils.common import Common
 
 class VladSignal:
-    def __init__(self, brokerInstance : MetaTrader5Broker):
+    def __init__(self, brokerInstance : MetaTrader5Broker,comentario):
         self.brokerInstance : MetaTrader5Broker = brokerInstance
         self.RISK = 0.005
+        self.comentario = comentario
         pass
         
     def handle(self,msg,last_cash_balance):
@@ -25,12 +26,12 @@ class VladSignal:
         
         if orders_type["hasMoveSL"]:
             print("ACTION - Mover SL")
-            self.brokerInstance.mover_stop_loss_be(symbol,"vlad")
+            self.brokerInstance.mover_stop_loss_be(symbol,self.comentario)
             
         if orders_type["hasClosePartial"]:
             print("ACTION - Parcial")
             percentage = Common.extraer_porcentaje(msg)
-            self.brokerInstance.close_partial(symbol,"vlad",partial=percentage)
+            self.brokerInstance.close_partial(symbol,self.comentario,partial=percentage)
             
         if orders_type["hasMoveSL"] or orders_type["hasClosePartial"] or can_open_new_position == False:
             return
@@ -42,7 +43,7 @@ class VladSignal:
             tpList = [valores['TP1']]
             if(valores['TP2'] != None):tpList.append(valores['TP2'])
             if(valores['TP3'] != None):tpList.append(valores['TP3'])
-            self.brokerInstance.handle_order(valores=valores,symbol=symbol,risk=self.RISK,tpList=tpList,nombreStrategy="VLAD")
+            self.brokerInstance.handle_order(valores=valores,symbol=symbol,risk=self.RISK,tpList=tpList,nombreStrategy=self.comentario)
             return
 
     def getSymbol(self,msg):
