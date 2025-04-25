@@ -1,7 +1,10 @@
 import re
 
 class Common:
-    def limpiar_numero(self, num_str):
+    def __init__(self):
+        pass
+    
+    def limpiar_numero(num_str):
         """
         Limpia y convierte un string numérico en float.
         Soporta:
