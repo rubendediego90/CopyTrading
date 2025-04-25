@@ -3,9 +3,10 @@ import re
 from brokers.MetaTrader5_broker import MetaTrader5Broker
 
 class SnipersGold:
-    def __init__(self, brokerInstance : MetaTrader5Broker):
+    def __init__(self, brokerInstance : MetaTrader5Broker, comentario):
         self.brokerInstance : MetaTrader5Broker = brokerInstance
         self.RISK = 0.005
+        self.comentario = comentario
         pass
         
     def handle(self,msg,last_cash_balance):
@@ -17,9 +18,12 @@ class SnipersGold:
             print('mensaje sin identificar simbolo',msg)
             return
             
+        self.brokerInstance.setSymbolInfo(symbol)
         print('El símbolo es:',symbol)
         
         orders_type = self.getOrderType(msg)
+        
+        print("order typs",orders_type)
         
         if can_open_new_position == False:
             return
@@ -31,7 +35,17 @@ class SnipersGold:
             tpList = valores['TP']
             print("tpList",tpList)
             print("valores",valores)
-            self.brokerInstance.handle_order(valores=valores,symbol=symbol,risk=self.RISK,tpList=tpList,nombreStrategy="SNIPERS_GOLD")
+            self.brokerInstance.handle_order(valores=valores,symbol=symbol,risk=self.RISK,tpList=tpList,nombreStrategy=self.comentario)
+            return
+        
+        if orders_type["hasMoveSL"]:
+            print("ACTION - Mueve stop loss")
+            self.brokerInstance.mover_stop_loss_be(symbol=symbol,comentario_buscado=self.comentario)
+            return
+        
+        if orders_type["hasClosePendings"]:
+            print("ACTION - Cierra pendientes")
+            self.brokerInstance.close_pending(symbol=symbol,comentario_buscado=self.comentario)
             return
 
     def getSymbol(self,msg):
@@ -47,17 +61,37 @@ class SnipersGold:
     
     def getOrderType(self,msg):
         words_open = ["tp","entry","sl"]
+        words_be = ["tp2//","set breakeven"]
+        words_be_2 = ["tp2","hit"]
+        words_delete_pendings_1 = ["tp1//","pips"]
+        words_delete_pendings_2 = ["tp2//","pips"]
 
         msg_lower = msg.lower()
         words_open_lower = [p.lower() for p in words_open]
+        words_close_pendings_1_lower = [p.lower() for p in words_delete_pendings_1]
+        words_close_pendings_2_lower = [p.lower() for p in words_delete_pendings_2]
+        words_move_sl_lower = [p.lower() for p in words_be]
+        words_move_sl_2_lower = [p.lower() for p in words_be_2]
         
         hasNewOrder = False
+        hasMoveSL = False
+        hasClosePendings = False
 
         if all(palabra in msg_lower for palabra in words_open_lower):
             hasNewOrder = True
             
+        if all((palabra in msg_lower for palabra in words_move_sl_lower) or
+        all(palabra in msg_lower for palabra in words_move_sl_2_lower)):
+            hasMoveSL = True
+            
+        if (all(palabra in msg_lower for palabra in words_close_pendings_1_lower) or
+            all(palabra in msg_lower for palabra in words_close_pendings_2_lower)):
+            hasClosePendings = True
+             
         return {
             "hasNewOrder": hasNewOrder,
+            "hasMoveSL": hasMoveSL,
+            "hasClosePendings": hasClosePendings,
         }
         
     #TODO revisar

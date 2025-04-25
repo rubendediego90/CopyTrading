@@ -17,6 +17,7 @@ class VladSignal:
             print('mensaje sin identificar simbolo',msg)
             return
             
+        self.brokerInstance.setSymbolInfo(symbol)
         print('El símbolo es:',symbol)
         
         orders_type = self.getOrderType(msg)

@@ -33,7 +33,8 @@ chats_a_escuchar = [
     int(CANALS.BIT_LOBO),
     int(CANALS.SIGNAL_VLAD),
     int(CANALS.CRIPTO_SENIALES),
-    int(CANALS.SNIPERS_GOLD),
+    int(CANALS.SNIPERS_GOLD_VIP),
+    int(CANALS.SNIPERS_GOLD_PUBLIC),
     int(GROUPS.TEST),
     #int(GROUPS.VLAD_DUDAS),
     #int(GROUPS.RUPENS),
@@ -62,7 +63,8 @@ async def manejador_mensajes(event):
     print("es lobo?",chat_id == int(CANALS.BIT_LOBO))
     print("es vlad?",chat_id == int(CANALS.SIGNAL_VLAD))
     print("es señales nuevo?",chat_id == int(CANALS.CRIPTO_SENIALES))
-    print("esgold?",chat_id == int(CANALS.SNIPERS_GOLD))
+    print("esgold vip?",chat_id == int(CANALS.SNIPERS_GOLD_VIP))
+    print("esgold public?",chat_id == int(CANALS.SNIPERS_GOLD_PUBLIC))
     print("es TEST?",chat_id == int(GROUPS.TEST))
     
     
@@ -70,16 +72,21 @@ async def manejador_mensajes(event):
         vladSignal = VladSignal(brokerInstance)
         vladSignal.handle(mensaje,last_cash_balance)
         
-        snipersGold = SnipersGold(brokerInstance)
+        snipersGold = SnipersGold(brokerInstance,"SNIPERS_GOLD_VIP")
         snipersGold.handle(mensaje,last_cash_balance)
         
         brokerInstance.disconnect()
         
         
-    if chat_id == int(CANALS.SNIPERS_GOLD):#CANALS.SNIPERS_GOLD: 
-        vladSignal = SnipersGold(brokerInstance)
-        vladSignal.handle(mensaje,last_cash_balance)
-        brokerInstance.disconnect()    
+    if chat_id == int(CANALS.SNIPERS_GOLD_VIP):#CANALS.SNIPERS_GOLD: 
+        goldVip = SnipersGold(brokerInstance,"SNIPERS_GOLD_VIP")
+        goldVip.handle(mensaje,last_cash_balance)
+        brokerInstance.disconnect()   
+    
+    if chat_id == int(CANALS.SNIPERS_GOLD_PUBLIC):#CANALS.SNIPERS_GOLD: 
+        goldPublic = SnipersGold(brokerInstance,"SNIPERS_GOLD_PUBLIC")
+        goldPublic.handle(mensaje,last_cash_balance)
+        brokerInstance.disconnect()   
     
     if chat_id == int(CANALS.SIGNAL_VLAD):#CANALS.SIGNAL_VLAD: 
         vladSignal = VladSignal(brokerInstance)

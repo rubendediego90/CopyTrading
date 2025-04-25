@@ -10,6 +10,7 @@ class MetaTrader5Broker():
         # Buscar valores
         load_dotenv(find_dotenv())
         self.account_info = None
+        self.symbol_info = None
         
         # Inicializacion de la plataforma
         self._initialize_platform()
@@ -52,6 +53,11 @@ class MetaTrader5Broker():
         if not mt5.terminal_info().trade_allowed:
             raise Exception("El trading algorítmico está desactivado")
         
+    def setSymbolInfo(self,symbol):
+        self.symbol_info = mt5.symbol_info(symbol)
+        
+    def getSymbolInfo(self): return self.symbol_info
+        
     #TODO mensaje telegram añadir en cada operacion si es real o no
     def _is_real_account(self) -> None:
         #Comprueba el tipo de cuenta
@@ -69,11 +75,11 @@ class MetaTrader5Broker():
         # 2) Si no lo está, lo añadiremos
 
         for symbol in symbols:
-            if mt5.symbol_info(symbol) is None:
+            if self.getSymbolInfo() is None:
                 print(f"{Utils.dateprint()} - No se ha podido añadir el símbolo {symbol} al MarketWatch: {mt5.last_error()}")
                 continue
             
-            if not mt5.symbol_info(symbol).visible:
+            if not self.getSymbolInfo().visible:
                 if not mt5.symbol_select(symbol, True):
                     print(f"No se ha podido añadir el símbolo {symbol} al MarketWatch: {mt5.last_error()}")
                 else:
@@ -148,19 +154,15 @@ class MetaTrader5Broker():
                 = 0.1 contratos
         Entonces deberías abrir una posición de 0.1 contratos (BTC) para que, si se alcanza el SL, pierdas exactamente el 0.5% de tu cuenta.
         '''
-        
-        # Obtener la información del símbolo
-        symbol_info = mt5.symbol_info(symbol)
 
-        if symbol_info is not None:
-            tamanio_contrato = symbol_info.trade_contract_size
-        
+        symbol_info = self.getSymbolInfo()
+        tamanio_contrato = symbol_info.trade_contract_size
         # Cálculo del volumen
         riesgo_dinero = balance * risk/numTP  # Riesgo en dinero
         diferencia_precio = abs(entry - sl)  # Diferencia de precio (Stop Loss - Entrada)
         volumen = riesgo_dinero / (diferencia_precio * tamanio_contrato)  # Cálculo del volumen
         
-        return self.ajuste_volumen_step(volumen,symbol_info)
+        return self.ajuste_volumen_step(volumen,self.getSymbolInfo())
     
     def ajuste_volumen_step(self,volumen,symbol_info):
         volume_step = symbol_info.volume_step  
@@ -188,9 +190,9 @@ class MetaTrader5Broker():
         
         entry_price = 0.0
         if order_event.signal == "BUY":
-            entry_price = mt5.symbol_info(order_event.symbol).ask
+            entry_price = self.getSymbolInfo().ask
         else:
-            entry_price = mt5.symbol_info(order_event.symbol).bid
+            entry_price = self.getSymbolInfo().bid
 
         # Creación del market order request
         market_order_request = {
@@ -275,7 +277,7 @@ class MetaTrader5Broker():
             if position.symbol == symbol and comentario_buscado.lower() in position.comment.lower():
                 nuevo_vol = position.volume*partial/100
                 
-                symbol_info= mt5.symbol_info(position.symbol)
+                symbol_info= self.getSymbolInfo()
                 nuevo_vol = self.ajuste_volumen_step(nuevo_vol,symbol_info=symbol_info)
                 
                 # Crear el dict para la modificación
@@ -284,7 +286,7 @@ class MetaTrader5Broker():
                     'position': position.ticket,
                     'symbol': position.symbol,
                     'volume': nuevo_vol,
-                    'price': mt5.symbol_info(position.symbol).bid,
+                    'price': self.getSymbolInfo().bid,
                     'type': mt5.ORDER_TYPE_BUY if position.type == mt5.ORDER_TYPE_SELL else mt5.ORDER_TYPE_SELL,
                     'type_filling': mt5.ORDER_FILLING_FOK,
                     'comment':position.comment
@@ -302,6 +304,8 @@ class MetaTrader5Broker():
     def close_pending(self, symbol, comentario_buscado):
     # Obtener las órdenes pendientes
         orders = mt5.orders_get()
+        
+        print("ordenes pendientes",orders)
 
         if orders is None or len(orders) == 0:
             print("No hay órdenes pendientes")
@@ -309,7 +313,12 @@ class MetaTrader5Broker():
 
         # Buscar la orden que deseas eliminar
         for order in orders:
+            print("dentro for ordenes pendientes",order)
+            print("comentario_buscado.lower()",comentario_buscado.lower())
+            print(" order.comment.lower()", order.comment.lower())
             if order.symbol == symbol and comentario_buscado.lower() in order.comment.lower():
+                print("dentro if ordenes pendientes",order)
+                
                 # Crear el dict para eliminar la orden
                 cancel_request = {
                     'action': mt5.TRADE_ACTION_REMOVE,
@@ -327,6 +336,10 @@ class MetaTrader5Broker():
                     print(f"{Utils.dateprint()} - Error al eliminar la orden pendiente {order.ticket} en {order.symbol}: {result.comment}")
         
     def pesimist_balance_positions_open_and_pending(self):
+        #todo arreglar
+        '''
+        hay que mirarlo para cada posicion abierta, son muchas llamadas, evaluar meter en stored el dato
+        '''
         # Obtener órdenes pendientes
         pending_orders = mt5.orders_get()
         # Obtener posiciones abiertas
@@ -366,6 +379,9 @@ class MetaTrader5Broker():
     def getBalanceCash(self):
         return self.account_info['balance']
     
+    def setComment(self,nombreStrategy,symbol,num):
+        return f"{nombreStrategy}_{symbol}_TP{num+1}"
+    
     def can_open_new_position(self,last_cash_balance,percentage_max_down):
         #Ver si llegamos a perder la cuenta
         balance_open_pendings = self.pesimist_balance_positions_open_and_pending()
@@ -388,6 +404,7 @@ class MetaTrader5Broker():
         print("handle_order", valores)
         #Cierra ordenes anteriores con mismo comentario
         self.close_partial(symbol,comentario_buscado=nombreStrategy,partial=100)
+        self.close_pending(symbol,comentario_buscado=nombreStrategy)
         
         has_range = valores["rango_inferior"] is not None and valores["rango_superior"] is not None
         num_tps = len(tpList)
@@ -404,7 +421,7 @@ class MetaTrader5Broker():
                     sl=stop_loss,
                     tp=valores.get(f"TP{i}", tp),
                     target_order=OrderType.MARKET,
-                    comment=f"{nombreStrategy}_{symbol}_TP{i}",
+                    comment=self.setComment(nombreStrategy=nombreStrategy,symbol=symbol,num=i),
                 )
                 self.execute_order(order)
                 print(f"✅ ORDER - TP{i}:", order)
@@ -429,7 +446,10 @@ class MetaTrader5Broker():
         
         # Entrar al mercado si el precio está dentro del rango
         signal_type = SignalType.BUY if is_long else SignalType.SELL
-
+        print("Rango",rango_inferior)
+        print("Rango",rango_superior)
+        print("current_ask",current_ask)
+        print("current_bid",current_bid)
         if is_long and rango_inferior <= current_ask <= rango_superior:
             lotes = self.calc_lotes(symbol=symbol, sl=stop_loss, entry=current_ask, risk=risk, numTP=num_tps)
             enviar_ordenes_market(lotes, signal_type)
@@ -450,10 +470,12 @@ class MetaTrader5Broker():
             tpList=tpList,
             isLong=is_long,
             isShort=is_short,
+            tick_symbol=tick,
+            nombreStrategy=nombreStrategy
         )
         
     
-    def handle_order_pending(self,symbol,risk,sl,tpList,rango_superior,rango_inferior,isShort,isLong):
+    def handle_order_pending(self,symbol,risk,sl,tpList,rango_superior,rango_inferior,isShort,isLong,tick_symbol,nombreStrategy):
         NUM_ORDERS = 5 #TODO sacar fuera
         RISK_PERCENT = risk  # % de riesgo por operación
         STOP_LOSS_PRICE = sl # SL absoluto (ej. 2000)
@@ -467,15 +489,16 @@ class MetaTrader5Broker():
         
         #si llega al extremo contrario no seria buena señal, se elimina para distribuir mejor los lotes
         if isShort and entry_prices:
-            entry_prices.remove(min(entry_prices))
+            entry_prices.remove(max(entry_prices))
 
         if isLong and entry_prices:
-            entry_prices.remove(max(entry_prices))
+            entry_prices.remove(min(entry_prices))
         
         print("entry_prices",entry_prices)
         
         # === ENVÍO DE ÓRDENES PENDIENTES ===
-        def send_pending_order(order_type, entry_price, sl_price, tp_price, lot):
+        def send_pending_order(order_type, entry_price, sl_price, tp_price, lot,comment):
+            print("comment",comment)
             request = {
                 "action": mt5.TRADE_ACTION_PENDING,
                 "symbol": symbol,
@@ -488,7 +511,7 @@ class MetaTrader5Broker():
                 "deviation": 10,
                 "type_time": mt5.ORDER_TIME_GTC,
                 "type_filling": mt5.ORDER_FILLING_RETURN,
-                "comment": "AutoOrder"
+                "comment": comment
             }
             result = mt5.order_send(request)
             if result.retcode != mt5.TRADE_RETCODE_DONE:
@@ -497,30 +520,31 @@ class MetaTrader5Broker():
                 print(f"✅ {order_type} enviada: {entry_price}, lote: {lot}, SL: {sl_price}, TP: {tp_price}")
 
         # === ENVIAR TODAS LAS ÓRDENES ===
-        tick = mt5.symbol_info_tick(symbol)
+        tick = tick_symbol
         current_ask = tick.ask
         current_bid = tick.bid
 
         ordenes_registradas = []
 
         for entry in entry_prices:
-            for tp in take_profits:
+            for i, tp in enumerate(take_profits):
+                comment = self.setComment(nombreStrategy=nombreStrategy,symbol=symbol,num=i)
                 lot = self.calc_lotes(entry=entry, sl=STOP_LOSS_PRICE,risk=RISK_PERCENT / (len(entry_prices)),numTP=len(take_profits), symbol=symbol)
 
                 # === BUY PENDINGS ===
                 if entry > current_ask and isLong:
-                    send_pending_order(mt5.ORDER_TYPE_BUY_STOP, entry, STOP_LOSS_PRICE, tp, lot)
+                    send_pending_order(mt5.ORDER_TYPE_BUY_STOP, entry, STOP_LOSS_PRICE, tp, lot,comment)
                     ordenes_registradas.append(("BUY STOP", entry, STOP_LOSS_PRICE, tp, lot))
                 elif entry < current_ask and isLong:
-                    send_pending_order(mt5.ORDER_TYPE_BUY_LIMIT, entry, STOP_LOSS_PRICE, tp, lot)
+                    send_pending_order(mt5.ORDER_TYPE_BUY_LIMIT, entry, STOP_LOSS_PRICE, tp, lot,comment)
                     ordenes_registradas.append(("BUY LIMIT", entry, STOP_LOSS_PRICE, tp, lot))
 
                 # === SELL PENDINGS ===
                 if entry < current_bid and isShort:
-                    send_pending_order(mt5.ORDER_TYPE_SELL_STOP, entry, STOP_LOSS_PRICE, tp, lot)
+                    send_pending_order(mt5.ORDER_TYPE_SELL_STOP, entry, STOP_LOSS_PRICE, tp, lot,comment)
                     ordenes_registradas.append(("SELL STOP", entry, STOP_LOSS_PRICE, tp, lot))
                 elif entry > current_bid and isShort:
-                    send_pending_order(mt5.ORDER_TYPE_SELL_LIMIT, entry, STOP_LOSS_PRICE, tp, lot)
+                    send_pending_order(mt5.ORDER_TYPE_SELL_LIMIT, entry, STOP_LOSS_PRICE, tp, lot,comment)
                     ordenes_registradas.append(("SELL LIMIT", entry, STOP_LOSS_PRICE, tp, lot))
 
         # === IMPRIMIR RESUMEN DE ÓRDENES ===
