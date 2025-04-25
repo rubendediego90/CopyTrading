@@ -1,6 +1,7 @@
 from constantes.types import SYMBOLS_SNIPERS_GOLD, SYMBOL
 import re
 from brokers.MetaTrader5_broker import MetaTrader5Broker
+from utils.common import Common
 
 class SnipersGold:
     def __init__(self, brokerInstance : MetaTrader5Broker, comentario):
@@ -131,7 +132,7 @@ class SnipersGold:
         for clave, coincidencias in extracciones.items():
             if coincidencias:
                 # Si encontramos coincidencias, las limpiamos
-                resultados[clave] = [self.limpiar_numero(c) for c in coincidencias if self.limpiar_numero(c) is not None]
+                resultados[clave] = [Common.limpiar_numero(c) for c in coincidencias if Common.limpiar_numero(c) is not None]
             else:
                 # Si no encontramos coincidencias, asignamos None
                 resultados[clave] = None
@@ -158,37 +159,6 @@ class SnipersGold:
 
 
         return resultados
-    
-    def limpiar_numero(self, num_str):
-        """
-        Limpiar el número removiendo espacios, comas, y manejando sufijos como 'K', 'M' o 'B'.
-        También gestiona la separación de miles y decimales.
-        """
-        # Quitar espacios y comas primero
-        num_str = num_str.replace(" ", "").replace(",", "")
-
-        # Si tiene un punto, verificamos si es un separador de miles o un decimal
-        if '.' in num_str:
-            partes = num_str.split('.')
-            # Si el número tiene más de 3 dígitos después del punto, es un separador de miles
-            if len(partes[-1]) == 3:  # Tiene 3 cifras a la derecha => separador de miles
-                    num_str = num_str.replace('.', '')
-
-        # Verificamos los sufijos 'K', 'M', 'B' (mayúsculas y minúsculas)
-        if num_str.endswith(('K', 'k')):
-            return float(num_str[:-1]) * 1000
-        elif num_str.endswith(('M', 'm')):
-            return float(num_str[:-1]) * 1000000
-        elif num_str.endswith(('B', 'b')):
-            return float(num_str[:-1]) * 1000000000
-
-        # Intentamos convertir el número limpio en float
-        try:
-            return float(num_str)
-        except ValueError:
-            print(f"Advertencia: No se pudo convertir el valor '{num_str}' a número.")
-            return None
-        
 
 
 

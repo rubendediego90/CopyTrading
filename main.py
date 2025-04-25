@@ -63,7 +63,7 @@ async def manejador_mensajes(event):
 
     if chat_id == int(GROUPS.TEST):
         SnipersGold(brokerInstance, "SNIPERS_GOLD_PUB").handle(mensaje, last_cash_balance)
-        #VladSignal(brokerInstance).handle(mensaje, last_cash_balance)
+        VladSignal(brokerInstance).handle(mensaje, last_cash_balance)
         #SnipersGold(brokerInstance, "SNIPERS_GOLD_VIP").handle(mensaje, last_cash_balance)
 
     if chat_id == int(CANALS.SNIPERS_GOLD_VIP):
