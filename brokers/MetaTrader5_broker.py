@@ -498,7 +498,6 @@ class MetaTrader5Broker():
         
         # === ENVÍO DE ÓRDENES PENDIENTES ===
         def send_pending_order(order_type, entry_price, sl_price, tp_price, lot,comment):
-            print("comment",comment)
             request = {
                 "action": mt5.TRADE_ACTION_PENDING,
                 "symbol": symbol,

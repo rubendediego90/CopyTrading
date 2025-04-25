@@ -1,30 +1,27 @@
 import os
+import threading
+import time
+import datetime
 from telethon.sync import TelegramClient
-from telethon.tl.types import Channel
-from telethon import TelegramClient, events
-from datetime import datetime
+from telethon import events
 from constantes.grupos import GROUPS
 from constantes.canals import CANALS
 from utils.groups_canals import CanalsYGroups
 from handlers.vlad_signals import VladSignal
 from handlers.sinpers_gold import SnipersGold
 from brokers.MetaTrader5_broker import MetaTrader5Broker
-import datetime
 from utils.utils import Utils
 
+# ✅ Cargamos las variables de entorno
 a = os.getenv("MT5_PATH")
+api_id = os.getenv("API_ID")
+api_hash = os.getenv("API_HASH")
 
-api_id = os.getenv("API_ID")    # tu api_id
-api_hash = os.getenv("API_HASH")  # tu api_hash
-
-
-canal_used = CANALS.SIGNAL_VLAD
-group_used = GROUPS.RUPENS
-
-# Creamos el cliente y arrancamos sesión
+# ✅ Cliente de Telegram
 client = TelegramClient('SesionRuben', api_id, api_hash)
 client.start()
 
+# ✅ Inicializamos grupos y canales
 canalsYGroups = CanalsYGroups(client)
 canalsYGroups.getCanals()
 client.loop.run_until_complete(canalsYGroups.getGroups())
@@ -36,62 +33,56 @@ chats_a_escuchar = [
     int(CANALS.SNIPERS_GOLD_VIP),
     int(CANALS.SNIPERS_GOLD_PUBLIC),
     int(GROUPS.TEST),
-    #int(GROUPS.VLAD_DUDAS),
-    #int(GROUPS.RUPENS),
 ]
 
 last_day_balance = datetime.date(1990, 4, 21)
 last_cash_balance = 0.0
+brokerInstance = MetaTrader5Broker()
 
-
+# ✅ Manejo de mensajes
 @client.on(events.NewMessage(chats=chats_a_escuchar))
 async def manejador_mensajes(event):
-    global last_day_balance  # Usar la variable global
+    global last_day_balance, last_cash_balance
     today = datetime.date.today()
-    brokerInstance = MetaTrader5Broker()
-    
-    if(last_day_balance == 0.0 or last_day_balance <= today):
+
+    if last_day_balance == 0.0 or last_day_balance <= today:
         last_day_balance = today
         last_cash_balance = brokerInstance.getBalanceCash()
-        print(f"{Utils.dateprint()} - Reseteo fecha y guarda balance",last_cash_balance)
-        
-    chat_id = event.chat_id  # 👈 ID del canal o grupo
+        print(f"{Utils.dateprint()} - Reseteo fecha y guarda balance", last_cash_balance)
+
+    chat_id = event.chat_id
     mensaje = event.raw_text
     await canalsYGroups.msgLog(event)
-    #print("chat_id",chat_id)
-    #print("canal vlad señales",int(CANALS.SIGNAL_VLAD))
-    print("es lobo?",chat_id == int(CANALS.BIT_LOBO))
-    print("es vlad?",chat_id == int(CANALS.SIGNAL_VLAD))
-    print("es señales nuevo?",chat_id == int(CANALS.CRIPTO_SENIALES))
-    print("esgold vip?",chat_id == int(CANALS.SNIPERS_GOLD_VIP))
-    print("esgold public?",chat_id == int(CANALS.SNIPERS_GOLD_PUBLIC))
-    print("es TEST?",chat_id == int(GROUPS.TEST))
-    
-    
-    if chat_id == int(GROUPS.TEST):#CANALS.SNIPERS_GOLD: 
-        vladSignal = VladSignal(brokerInstance)
-        vladSignal.handle(mensaje,last_cash_balance)
-        
-        snipersGold = SnipersGold(brokerInstance,"SNIPERS_GOLD_VIP")
-        snipersGold.handle(mensaje,last_cash_balance)
-        
-        brokerInstance.disconnect()
-        
-        
-    if chat_id == int(CANALS.SNIPERS_GOLD_VIP):#CANALS.SNIPERS_GOLD: 
-        goldVip = SnipersGold(brokerInstance,"SNIPERS_GOLD_VIP")
-        goldVip.handle(mensaje,last_cash_balance)
-        brokerInstance.disconnect()   
-    
-    if chat_id == int(CANALS.SNIPERS_GOLD_PUBLIC):#CANALS.SNIPERS_GOLD: 
-        goldPublic = SnipersGold(brokerInstance,"SNIPERS_GOLD_PUBLIC")
-        goldPublic.handle(mensaje,last_cash_balance)
-        brokerInstance.disconnect()   
-    
-    if chat_id == int(CANALS.SIGNAL_VLAD):#CANALS.SIGNAL_VLAD: 
-        vladSignal = VladSignal(brokerInstance)
-        vladSignal.handle(mensaje,last_cash_balance)
-        brokerInstance.disconnect()    
+
+    print("es lobo?", chat_id == int(CANALS.BIT_LOBO))
+    print("es vlad?", chat_id == int(CANALS.SIGNAL_VLAD))
+    print("es señales nuevo?", chat_id == int(CANALS.CRIPTO_SENIALES))
+    print("esgold vip?", chat_id == int(CANALS.SNIPERS_GOLD_VIP))
+    print("esgold public?", chat_id == int(CANALS.SNIPERS_GOLD_PUBLIC))
+    print("es TEST?", chat_id == int(GROUPS.TEST))
+
+    if chat_id == int(GROUPS.TEST):
+        SnipersGold(brokerInstance, "SNIPERS_GOLD_PUB").handle(mensaje, last_cash_balance)
+        #VladSignal(brokerInstance).handle(mensaje, last_cash_balance)
+        #SnipersGold(brokerInstance, "SNIPERS_GOLD_VIP").handle(mensaje, last_cash_balance)
+
+    if chat_id == int(CANALS.SNIPERS_GOLD_VIP):
+        SnipersGold(brokerInstance, "SNIPERS_GOLD_VIP").handle(mensaje, last_cash_balance)
+
+    if chat_id == int(CANALS.SNIPERS_GOLD_PUBLIC):
+        SnipersGold(brokerInstance, "SNIPERS_GOLD_PUB").handle(mensaje, last_cash_balance)
+
+    if chat_id == int(CANALS.SIGNAL_VLAD):
+        VladSignal(brokerInstance).handle(mensaje, last_cash_balance)
+
+# ✅ HILO SECUNDARIO – imprime mensaje cada 5 segundos
+def bucle_mensajes():
+    while True:
+        print("🟢 Mensaje enviado desde hilo secundario")
+        time.sleep(30)
+
+# 🔁 Lanzamos el hilo antes de bloquear el hilo principal con el cliente
+threading.Thread(target=bucle_mensajes, daemon=True).start()
 
 print("📡 Escuchando grupos y canales...")
 client.run_until_disconnected()
