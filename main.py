@@ -6,6 +6,7 @@ from telethon.sync import TelegramClient
 from telethon import events
 from constantes.grupos import GROUPS
 from constantes.canals import CANALS
+from constantes.config_comment import CONFIG_COMMENT,CONFIG_NAME_STRATEGY
 from utils.groups_canals import CanalsYGroups
 from handlers.vlad_signals import VladSignal
 from handlers.sinpers_gold import SnipersGold
@@ -37,6 +38,7 @@ chats_a_escuchar = [
     int(GROUPS.TEST),
 ]
 
+FTMO_CONDITION_PERCENTAGE = 4
 last_day_balance = datetime.date(1990, 4, 21)
 last_cash_balance = 0.0
 brokerInstance = MetaTrader5Broker()
@@ -66,26 +68,27 @@ async def manejador_mensajes(event):
 
     if chat_id == int(GROUPS.TEST):
         #SnipersGold(brokerInstance, "SNIPERS_GOLD_PUB").handle(mensaje, last_cash_balance)
-        #VladSignal(brokerInstance).handle(mensaje, last_cash_balance)
-        PtjgGold(brokerInstance,"PTJG_GOLD_PUB").handle(mensaje, last_cash_balance)
+        VladSignal(brokerInstance,f"{CONFIG_NAME_STRATEGY.VLAD.value}{CONFIG_COMMENT.AUTO_SL.value}").handle(mensaje, last_cash_balance)
+        #PtjgGold(brokerInstance,f"{CONFIG_NAME_STRATEGY.PTJG_GOLD_PUB.value}{CONFIG_COMMENT.AUTO_SL.value}").handle(mensaje, last_cash_balance)
         #SnipersGold(brokerInstance, "SNIPERS_GOLD_VIP").handle(mensaje, last_cash_balance)
 
     if chat_id == int(CANALS.SNIPERS_GOLD_VIP):
-        SnipersGold(brokerInstance, "SNIPERS_GOLD_VIP").handle(mensaje, last_cash_balance)
+        SnipersGold(brokerInstance, f"{CONFIG_NAME_STRATEGY.SNIPERS_GOLD_VIP.value}{CONFIG_COMMENT.AUTO_SL.value}").handle(mensaje, last_cash_balance)
 
     if chat_id == int(CANALS.SNIPERS_GOLD_PUBLIC):
-        SnipersGold(brokerInstance, "SNIPERS_GOLD_PUB").handle(mensaje, last_cash_balance)
+        SnipersGold(brokerInstance, f"{CONFIG_NAME_STRATEGY.SNIPERS_GOLD_PUB.value}{CONFIG_COMMENT.AUTO_SL.value}").handle(mensaje, last_cash_balance)
         
     if chat_id == int(CANALS.PTJG_GOLD_PUBLIC):
-        PtjgGold(brokerInstance, "PTJG_GOLD_PUB").handle(mensaje, last_cash_balance)
+        PtjgGold(brokerInstance, f"{CONFIG_NAME_STRATEGY.PTJG_GOLD_PUB.value}{CONFIG_COMMENT.AUTO_SL.value}").handle(mensaje, last_cash_balance)
 
     if chat_id == int(CANALS.SIGNAL_VLAD):
-        VladSignal(brokerInstance,"VLAD").handle(mensaje, last_cash_balance)
+        VladSignal(brokerInstance,f"{CONFIG_NAME_STRATEGY.VLAD.value}{CONFIG_COMMENT.AUTO_SL.value}").handle(mensaje, last_cash_balance)
 
 # ✅ HILO SECUNDARIO – imprime mensaje cada 5 segundos
 def bucle_mensajes():
     while True:
         print("🟢 Mensaje enviado desde hilo secundario")
+        brokerInstance.can_open_new_position(last_cash_balance,FTMO_CONDITION_PERCENTAGE)
         time.sleep(30)
 
 # 🔁 Lanzamos el hilo antes de bloquear el hilo principal con el cliente
