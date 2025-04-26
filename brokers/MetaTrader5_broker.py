@@ -474,6 +474,28 @@ class MetaTrader5Broker():
             nombreStrategy=nombreStrategy
         )
         
+            # === ENVÍO DE ÓRDENES PENDIENTES ===
+    def send_pending_order(self,symbol,order_type, entry_price, sl_price, tp_price, lot,comment):
+        request = {
+            "action": mt5.TRADE_ACTION_PENDING,
+            "symbol": symbol,
+            "volume": lot,
+            "type": order_type,
+            "price": entry_price,
+            "sl": sl_price,
+            "tp": tp_price,
+            "magic": 123456,
+            "deviation": 10,
+            "type_time": mt5.ORDER_TIME_GTC,
+            "type_filling": mt5.ORDER_FILLING_RETURN,
+            "comment": comment
+        }
+        result = mt5.order_send(request)
+        if result.retcode != mt5.TRADE_RETCODE_DONE:
+            print(f"❌ Error: {result.comment} enviada: {entry_price}, lote: {lot}, SL: {sl_price}, TP: {tp_price}")
+        else:
+            print(f"✅ {order_type} enviada: {entry_price}, lote: {lot}, SL: {sl_price}, TP: {tp_price}")
+    
     
     def handle_order_pending(self,symbol,risk,sl,tpList,rango_superior,rango_inferior,isShort,isLong,tick_symbol,nombreStrategy):
         NUM_ORDERS = 5 #TODO sacar fuera
@@ -496,28 +518,6 @@ class MetaTrader5Broker():
         
         print("entry_prices",entry_prices)
         
-        # === ENVÍO DE ÓRDENES PENDIENTES ===
-        def send_pending_order(order_type, entry_price, sl_price, tp_price, lot,comment):
-            request = {
-                "action": mt5.TRADE_ACTION_PENDING,
-                "symbol": symbol,
-                "volume": lot,
-                "type": order_type,
-                "price": entry_price,
-                "sl": sl_price,
-                "tp": tp_price,
-                "magic": 123456,
-                "deviation": 10,
-                "type_time": mt5.ORDER_TIME_GTC,
-                "type_filling": mt5.ORDER_FILLING_RETURN,
-                "comment": comment
-            }
-            result = mt5.order_send(request)
-            if result.retcode != mt5.TRADE_RETCODE_DONE:
-                print(f"❌ Error: {result.comment} enviada: {entry_price}, lote: {lot}, SL: {sl_price}, TP: {tp_price}")
-            else:
-                print(f"✅ {order_type} enviada: {entry_price}, lote: {lot}, SL: {sl_price}, TP: {tp_price}")
-
         # === ENVIAR TODAS LAS ÓRDENES ===
         tick = tick_symbol
         current_ask = tick.ask
@@ -532,18 +532,18 @@ class MetaTrader5Broker():
 
                 # === BUY PENDINGS ===
                 if entry > current_ask and isLong:
-                    send_pending_order(mt5.ORDER_TYPE_BUY_STOP, entry, STOP_LOSS_PRICE, tp, lot,comment)
+                    self.send_pending_order(symbol,mt5.ORDER_TYPE_BUY_STOP, entry, STOP_LOSS_PRICE, tp, lot,comment)
                     ordenes_registradas.append(("BUY STOP", entry, STOP_LOSS_PRICE, tp, lot))
                 elif entry < current_ask and isLong:
-                    send_pending_order(mt5.ORDER_TYPE_BUY_LIMIT, entry, STOP_LOSS_PRICE, tp, lot,comment)
+                    self.send_pending_order(symbol,mt5.ORDER_TYPE_BUY_LIMIT, entry, STOP_LOSS_PRICE, tp, lot,comment)
                     ordenes_registradas.append(("BUY LIMIT", entry, STOP_LOSS_PRICE, tp, lot))
 
                 # === SELL PENDINGS ===
                 if entry < current_bid and isShort:
-                    send_pending_order(mt5.ORDER_TYPE_SELL_STOP, entry, STOP_LOSS_PRICE, tp, lot,comment)
+                    self.send_pending_order(symbol,mt5.ORDER_TYPE_SELL_STOP, entry, STOP_LOSS_PRICE, tp, lot,comment)
                     ordenes_registradas.append(("SELL STOP", entry, STOP_LOSS_PRICE, tp, lot))
                 elif entry > current_bid and isShort:
-                    send_pending_order(mt5.ORDER_TYPE_SELL_LIMIT, entry, STOP_LOSS_PRICE, tp, lot,comment)
+                    self.send_pending_order(symbol,mt5.ORDER_TYPE_SELL_LIMIT, entry, STOP_LOSS_PRICE, tp, lot,comment)
                     ordenes_registradas.append(("SELL LIMIT", entry, STOP_LOSS_PRICE, tp, lot))
 
         # === IMPRIMIR RESUMEN DE ÓRDENES ===
