@@ -24,6 +24,7 @@ class MetaTrader5Broker():
         
         #Informacion por consola
         self._set_account_info()
+        self.print_account_info()
         
         #self._get_symbols_in_marketwatch()
         
@@ -91,7 +92,8 @@ class MetaTrader5Broker():
     def _set_account_info(self) -> None:
         # Recuperar un objeto de tipo AccountInfo
         self.account_info = mt5.account_info()._asdict()
-
+        
+    def print_account_info(self) -> None:
         print(f"+------------ Información de la cuenta ------------")
         print(f"| - ID de cuenta: {self.account_info['login']}")
         print(f"| - Nombre trader: {self.account_info['name']}")
@@ -114,28 +116,7 @@ class MetaTrader5Broker():
             print(f" - {sym}")
         
         return visible_symbols
-    
-    def get_open_positions_by_symbol(self,symbol):
-        # Obtener todas las órdenes abiertas
-        posiciones_abiertas = mt5.positions_get()
-        
-        print("posiciones_abiertas",posiciones_abiertas)
-
-        if posiciones_abiertas is None or len(posiciones_abiertas) == 0:
-            print("No hay órdenes abiertas.")
-        else:
-            # Filtrar órdenes por símbolo
-            ordenes_filtradas = [orden for orden in posiciones_abiertas if orden.symbol == symbol.upper()]
-            
-            if not ordenes_filtradas:
-                print(f"No hay órdenes abiertas para el símbolo {symbol}")
-            else:
-                print(f"Órdenes abiertas para {symbol.upper()}:")
-                for orden in ordenes_filtradas:
-                    print(f"Ticket: {orden.ticket}")
-                    print(f"Tipo: {orden.type}")
-                    print(f"Precio: {orden.price_open}")
-                    
+                       
     def calc_lotes(self,sl,entry,numTP,risk):
         tamanio_contrato = None
         account_info = mt5.account_info()._asdict()
