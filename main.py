@@ -13,6 +13,7 @@ from handlers.sinpers_gold import SnipersGold
 from handlers.ptjg_gold import PtjgGold
 from brokers.MetaTrader5_broker import MetaTrader5Broker
 from utils.utils import Utils
+from store.orders_store import ParameterStore
 
 # ✅ Cargamos las variables de entorno
 a = os.getenv("MT5_PATH")
@@ -41,7 +42,9 @@ chats_a_escuchar = [
 FTMO_CONDITION_PERCENTAGE = 4
 last_day_balance = datetime.date(1990, 4, 21)
 last_cash_balance = 0.0
-brokerInstance = MetaTrader5Broker()
+param_store = ParameterStore()
+brokerInstance = MetaTrader5Broker(param_store)
+#param_store.clear_list("MiEstrategia")
 
 # ✅ Manejo de mensajes
 @client.on(events.NewMessage(chats=chats_a_escuchar))
@@ -67,7 +70,7 @@ async def manejador_mensajes(event):
     print("es TEST?", chat_id == int(GROUPS.TEST))
 
     if chat_id == int(GROUPS.TEST):
-        #SnipersGold(brokerInstance, "SNIPERS_GOLD_PUB").handle(mensaje, last_cash_balance)
+        #SnipersGold(brokerInstance, f"{CONFIG_NAME_STRATEGY.SNIPERS_GOLD_VIP.value}{CONFIG_COMMENT.AUTO_SL.value}").handle(mensaje, last_cash_balance)
         VladSignal(brokerInstance,f"{CONFIG_NAME_STRATEGY.VLAD.value}{CONFIG_COMMENT.AUTO_SL.value}").handle(mensaje, last_cash_balance)
         #PtjgGold(brokerInstance,f"{CONFIG_NAME_STRATEGY.PTJG_GOLD_PUB.value}{CONFIG_COMMENT.AUTO_SL.value}").handle(mensaje, last_cash_balance)
         #SnipersGold(brokerInstance, "SNIPERS_GOLD_VIP").handle(mensaje, last_cash_balance)
@@ -89,6 +92,9 @@ def bucle_mensajes():
     while True:
         print("🟢 Mensaje enviado desde hilo secundario")
         brokerInstance.can_open_new_position(last_cash_balance,FTMO_CONDITION_PERCENTAGE)
+        ordenes = param_store.get("MiEstrategia", [])
+        for orden in ordenes:
+            print("print store",orden)
         time.sleep(30)
 
 # 🔁 Lanzamos el hilo antes de bloquear el hilo principal con el cliente
