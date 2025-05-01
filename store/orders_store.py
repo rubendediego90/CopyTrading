@@ -1,5 +1,6 @@
 import pickle
 import os
+from datetime import datetime, date
 
 class ParameterStore:
     def __init__(self, filename='parameters.pkl'):
@@ -24,6 +25,15 @@ class ParameterStore:
     # Obtener un parámetro específico
     def get(self, key, default=None):
         return self.parameters.get(key, default)
+    
+    def get_date(self, key, default=None):
+        value = self.get(key, default)
+        if value is None:
+            return default
+        try:
+            return datetime.fromisoformat(value).date()  # Solo retorna la parte de la fecha
+        except (ValueError, TypeError):
+            return default
 
     # Establecer un valor para una clave específica
     def set(self, key, value):
@@ -59,3 +69,20 @@ class ParameterStore:
         if key in self.parameters:
             self.parameters[key] = []
             self._save_parameters()
+            
+        # Guardar un número bajo una clave específica
+    def save_number(self, key, number):
+        self.parameters[key] = number
+        self._save_parameters()
+
+    def save_date(self, key, date_value=None):
+        # Siempre convertir a solo fecha (YYYY-MM-DD)
+        if date_value is None:
+            date_value = datetime.now().date()
+        elif isinstance(date_value, datetime):
+            date_value = date_value.date()
+        elif not isinstance(date_value, date):
+            raise ValueError("El valor debe ser datetime, date o None")
+
+        self.parameters[key] = date_value.isoformat()  # 'YYYY-MM-DD'
+        self._save_parameters()

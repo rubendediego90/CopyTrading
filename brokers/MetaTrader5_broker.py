@@ -4,6 +4,8 @@ from dotenv import load_dotenv, find_dotenv
 from utils.utils import Utils
 from event.events import OrderEvent,OrderType,SignalType
 from store.orders_store import ParameterStore
+from constantes.store_properties import STORE_PROPERTIES
+
 class MetaTrader5Broker():
     
     def __init__(self,parameterStore:ParameterStore):
@@ -329,31 +331,12 @@ class MetaTrader5Broker():
     def setComment(self,nombreStrategy,symbol,num):
         return f"{nombreStrategy}_{symbol}_TP{num+1}"
     
-    def can_open_new_position(self,last_cash_balance,percentage_max_down):
-        #Ver si llegamos a perder la cuenta
-        self._set_account_info()
-        balance_open_pendings = 0.0 #calcular las abiertas y pendientes si se van a cero
-
-        balance_postions_closed = self.getBalanceCash() - last_cash_balance + balance_open_pendings
-        ammount_max_to_loss = last_cash_balance * percentage_max_down / 100
-        
-                # se pone negativo porque el balance malo saldra negativo en la suma
-        can_open = ammount_max_to_loss > (-balance_postions_closed)
-        
-        print("BALANCE - PENDINGS",balance_open_pendings)
-        print("BALANCE - YESTERDAY",last_cash_balance)
-        print("BALANCE - TODAY",self.getBalanceCash())
-        print("BALANCE - Ammount max to loss",ammount_max_to_loss)
-        print("BALANCE CAN OPEN - ",can_open)
-
-        return can_open
-    
     def handle_order(self, valores, symbol, risk, tpList, nombreStrategy):
         print("handle_order", valores)
         #Cierra ordenes anteriores con mismo comentario
         self.close_partial(symbol,comentario_buscado=nombreStrategy,partial=100)
         self.close_pending(symbol,comentario_buscado=nombreStrategy)
-        self.parameterStore.remove_from_list("MiEstrategia", lambda item: item.get("symbol") == symbol and item.get("nombreStrategy") == nombreStrategy)
+        self.parameterStore.remove_from_list(STORE_PROPERTIES.ORDERS_OPEN_PENDINGS_LIST.value, lambda item: item.get("symbol") == symbol and item.get("nombreStrategy") == nombreStrategy)
         
         has_range = valores["rango_inferior"] is not None and valores["rango_superior"] is not None
         num_tps = len(tpList)
@@ -384,7 +367,7 @@ class MetaTrader5Broker():
                     "tp_index": i,
                     "nombreStrategy": nombreStrategy,
                     }
-                self.parameterStore.add_to_list("MiEstrategia", orden_data)
+                self.parameterStore.add_to_list(STORE_PROPERTIES.ORDERS_OPEN_PENDINGS_LIST.value, orden_data)
 
         tick = mt5.symbol_info_tick(symbol)
         if(tick == None):
@@ -463,7 +446,7 @@ class MetaTrader5Broker():
                 "tp_index": i,
                 "nombreStrategy": nombreStrategy,
                 }
-            self.parameterStore.add_to_list("MiEstrategia", orden_data)
+            self.parameterStore.add_to_list(STORE_PROPERTIES.ORDERS_OPEN_PENDINGS_LIST.value, orden_data)
     
     
     def handle_order_pending(self,symbol,risk,sl,tpList,rango_superior,rango_inferior,isShort,isLong,tick_symbol,nombreStrategy):

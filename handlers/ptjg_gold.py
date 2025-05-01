@@ -10,11 +10,9 @@ class PtjgGold:
         self.comentario = comentario
         pass
         
-    def handle(self,msg,last_cash_balance):
+    def handle(self,msg):
         print('*Snipers Gold*',msg)
         symbol = self.getSymbol(msg)
-        FTMO_CONDITION_PERCENTAGE = 4
-        can_open_new_position = self.brokerInstance.can_open_new_position(last_cash_balance,FTMO_CONDITION_PERCENTAGE)
         if(symbol == None):
             print('mensaje sin identificar simbolo',msg)
             return
@@ -25,9 +23,6 @@ class PtjgGold:
         orders_type = self.getOrderType(msg)
         
         print("order typs",orders_type)
-        
-        if can_open_new_position == False:
-            return
         
         if orders_type["hasNewOrder"]:
             print("ACTION - Nueva orden")
@@ -71,7 +66,6 @@ class PtjgGold:
         if all(palabra in msg_lower for palabra in words_open_lower):
             hasNewOrder = True
             
-             
         return {
             "hasNewOrder": hasNewOrder,
         }
