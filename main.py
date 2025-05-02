@@ -46,7 +46,7 @@ can_open_global = True
 # ✅ Manejo de mensajes
 @client.on(events.NewMessage(chats=chats_a_escuchar))
 async def manejador_mensajes(event):
-
+    global can_open_global 
     chat_id = event.chat_id
     mensaje = event.raw_text
     await canalsYGroups.msgLog(event)
@@ -58,10 +58,13 @@ async def manejador_mensajes(event):
     print("esgold public?", chat_id == int(CANALS.SNIPERS_GOLD_PUBLIC))
     print("es ptjg public?", chat_id == int(CANALS.PTJG_GOLD_PUBLIC))
     print("es TEST?", chat_id == int(GROUPS.TEST))
+    
+    #validar que se pueden abrir nuevas ordenes
+    if(can_open_global == False): return
 
     if chat_id == int(GROUPS.TEST):
         #SnipersGold(brokerInstance, f"{CONFIG_NAME_STRATEGY.SNIPERS_GOLD_VIP.value}{CONFIG_COMMENT.AUTO_SL.value}").handle(mensaje, last_cash_balance)
-        VladSignal(brokerInstance,f"{CONFIG_NAME_STRATEGY.VLAD.value}{CONFIG_COMMENT.AUTO_SL.value}").handle(mensaje)
+        VladSignal(brokerInstance,f"{CONFIG_NAME_STRATEGY.VLAD.value}").handle(mensaje)
         #PtjgGold(brokerInstance,f"{CONFIG_NAME_STRATEGY.PTJG_GOLD_PUB.value}{CONFIG_COMMENT.AUTO_SL.value}").handle(mensaje, last_cash_balance)
         #SnipersGold(brokerInstance, "SNIPERS_GOLD_VIP").handle(mensaje, last_cash_balance)
 
@@ -104,16 +107,21 @@ def bucle_mensajes():
             
             
         if(move_sl_auto_time == move_sl_auto_time_default):
-            #auto sl
+            #traer lista de ordenes abiertas y pendientes
+            orders_pendings = brokerInstance.get_orders_pendings()
+            positions_opens = brokerInstance.get_positions_open()
+            
+            #print('orders_pendings',orders_pendings)
+            #print('positions_opens',positions_opens)
+            
+            #si no esta el tp1 mover el stop loss y cerrar las pendientes 
+            #buscar 
+            #traerse las ordenes pendientes cerrarlas todas las de ese comentario
+            #clean store 
             print("🟢 muevo stop loss?")
             move_sl_auto_time = 0
             
 
-        '''
-        ordenes = param_store.get(STORE_PROPERTIES.ORDERS_OPEN_PENDINGS_LIST.value, [])
-        for orden in ordenes:
-            print("print store",orden)
-        '''
         time.sleep(1)
 
 # 🔁 Lanzamos el hilo antes de bloquear el hilo principal con el cliente

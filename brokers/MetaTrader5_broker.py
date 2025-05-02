@@ -295,20 +295,13 @@ class MetaTrader5Broker():
     # Obtener las órdenes pendientes
         orders = mt5.orders_get()
         
-        print("ordenes pendientes",orders)
-
         if orders is None or len(orders) == 0:
             print("No hay órdenes pendientes")
             return
 
         # Buscar la orden que deseas eliminar
         for order in orders:
-            print("dentro for ordenes pendientes",order)
-            print("comentario_buscado.lower()",comentario_buscado.lower())
-            print(" order.comment.lower()", order.comment.lower())
             if order.symbol == symbol and comentario_buscado.lower() in order.comment.lower():
-                print("dentro if ordenes pendientes",order)
-                
                 # Crear el dict para eliminar la orden
                 cancel_request = {
                     'action': mt5.TRADE_ACTION_REMOVE,
@@ -347,6 +340,7 @@ class MetaTrader5Broker():
         def enviar_ordenes_market(lotes, signal_type,perdida,entry_price):
             for i, tp in enumerate(tpList, start=0):
                 comment = self.setComment(nombreStrategy=nombreStrategy,symbol=symbol,num=i)
+                print("ñññññññññññññ/////////////////ñññññññ",comment)
                 order = OrderEvent(
                     symbol=symbol,
                     volume=lotes,
@@ -447,6 +441,22 @@ class MetaTrader5Broker():
                 "nombreStrategy": nombreStrategy,
                 }
             self.parameterStore.add_to_list(STORE_PROPERTIES.ORDERS_OPEN_PENDINGS_LIST.value, orden_data)
+            
+    def get_positions_open(self):
+        # Obtener posiciones abiertas
+        positions = mt5.positions_get()
+        if positions is None:
+            print("No se pudieron obtener las posiciones:", mt5.last_error())
+        else:
+            return positions
+                
+    def get_orders_pendings(self):
+        # Obtener órdenes pendientes
+        orders = mt5.orders_get()
+        if orders is None:
+            print("No se pudieron obtener las órdenes pendientes:", mt5.last_error())
+        else:
+            return orders
     
     
     def handle_order_pending(self,symbol,risk,sl,tpList,rango_superior,rango_inferior,isShort,isLong,tick_symbol,nombreStrategy):
