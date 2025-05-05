@@ -4,10 +4,11 @@ from brokers.MetaTrader5_broker import MetaTrader5Broker
 from utils.common import Common
 
 class VladSignal:
-    def __init__(self, brokerInstance : MetaTrader5Broker,comentario):
+    def __init__(self, brokerInstance : MetaTrader5Broker,comentario, id_order):
         self.brokerInstance : MetaTrader5Broker = brokerInstance
         self.RISK = 0.005
         self.comentario = comentario
+        self.id_order = id_order
         pass
         
     def handle(self,msg):
@@ -22,9 +23,11 @@ class VladSignal:
         
         orders_type = self.getOrderType(msg)
         
+        print("orders_type",orders_type)
+        
         if orders_type["hasMoveSL"]:
             print("ACTION - Mover SL")
-            self.brokerInstance.mover_stop_loss_be(symbol,self.comentario)
+            self.brokerInstance.mover_stop_loss_be_by_symbol(symbol,self.comentario)
             
         if orders_type["hasClosePartial"]:
             print("ACTION - Parcial")
@@ -41,7 +44,7 @@ class VladSignal:
             tpList = [valores['TP1']]
             if(valores['TP2'] != None):tpList.append(valores['TP2'])
             if(valores['TP3'] != None):tpList.append(valores['TP3'])
-            self.brokerInstance.handle_order(valores=valores,symbol=symbol,risk=self.RISK,tpList=tpList,nombreStrategy=self.comentario)
+            self.brokerInstance.handle_order(valores=valores,symbol=symbol,risk=self.RISK,tpList=tpList,nombreStrategy=self.comentario,id_order=self.id_order)
             return
 
     def getSymbol(self,msg):

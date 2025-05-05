@@ -32,8 +32,11 @@ class FTMOUtils:
     def set_balance_data(self,current_balance):
         #mirar la ficha de la store
         fecha_balance = self.param_store.get_date(STORE_PROPERTIES.FECHA_BALANCE.value)
+        print("fecha y saved",fecha_balance)
+        
         today = datetime.date.today()
         if(fecha_balance == None or fecha_balance < today):
+            print("Seteo fecha y balance")
             # Guardar la fecha actual
             self.param_store.save_date(STORE_PROPERTIES.FECHA_BALANCE.value)
             # Guardar balance

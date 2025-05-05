@@ -63,6 +63,13 @@ class ParameterStore:
             filtered = [item for item in original if not filter_func(item)]
             self.parameters[key] = filtered
             self._save_parameters()
+            
+    def get_first_from_list(self, key, filter_func):
+        if key in self.parameters:
+            for item in self.parameters[key]:
+                if filter_func(item):
+                    return item
+        return None
 
     # ✅ Vaciar la lista de una estrategia
     def clear_list(self, key):
