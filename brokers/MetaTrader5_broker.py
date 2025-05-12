@@ -161,7 +161,6 @@ class MetaTrader5Broker():
         return volumeFinal
     
     def execute_order(self, order_event: OrderEvent) -> None:
-
         # Evaluamos el tipo de orden que se quiere ejecutar, y llamamos al método adecuado
         if order_event.target_order == "MARKET":
             # Llamamos al método que ejecuta órdenes a mercado
@@ -197,13 +196,13 @@ class MetaTrader5Broker():
             "comment":order_event.comment,
             "type_filling": mt5.ORDER_FILLING_FOK,
         }
-
         # Mandamos el trade request para ser ejecutado
         result = mt5.order_send(market_order_request)
 
         # Verificar el resultado de la ejecución de la orden
         if self._check_execution_status(result):
             print(f"{Utils.dateprint()} - Market Order {order_event.signal} para {order_event.symbol} de {order_event.volume} lotes ejecutada correctamente")
+            self.save_in_log(market_order_request)
         else:
             #Mandaremos un mensaje de error
             print(f"{Utils.dateprint()} - Ha habido un error al ejecutar la Market Order {order_event.signal} para {order_event.symbol}: {result.comment}")
@@ -217,7 +216,7 @@ class MetaTrader5Broker():
         else:
             return False
         
-    def mover_stop_loss_be_by_symbol(self, symbol, nombre_estrategia):
+    def mover_stop_loss_be_by_symbol(self, newPrice = None, strategiaName = None, symbol = None):
         # Obtener las posiciones activas
         positions = mt5.positions_get()
 
@@ -225,18 +224,26 @@ class MetaTrader5Broker():
             print("No hay posiciones activas")
             return
         
+        #filtrar las posiciones con ese comentario
+        if strategiaName is not None:
+            positions = [pos for pos in positions if strategiaName in pos.comment]
+            
+        if symbol is not None:
+            positions = [pos for pos in positions if strategiaName in pos.symbol]
+        
         # Buscar la posición que deseas modificar
         for position in positions:
-            self.mover_stop_loss_be_by_position(position)
+            self.mover_stop_loss_be_by_position(position,newPrice)
 
-    def mover_stop_loss_be_by_position(self, position):
+    def mover_stop_loss_be_by_position(self, position, newPrice = None):
         # Crear el dict para la modificación
+        newSl = newPrice if newPrice != None else position.price_open
         request = {
             "action": mt5.TRADE_ACTION_SLTP,
             "symbol": position.symbol,
             "position": position.ticket,
             "price": position.price_open,  # Precio de apertura (no lo modificamos)
-            "sl": position.price_open,  # El nuevo Stop Loss
+            "sl": newSl,  # El nuevo Stop Loss
             "tp": position.tp,  # Precio de Take Profit (no lo modificamos)
             "volume": position.volume,  # Volumen de la orden
             "type": position.type,  # Tipo de la orden (compra/venta)
@@ -335,22 +342,28 @@ class MetaTrader5Broker():
     def setComment(self,nombreStrategy,id_order,num):
         return f"{nombreStrategy}_{id_order}_TP{num+1}"
     
-    def test_strategy(self, valores, symbol, tpList, nombreStrategy):
+    def test_strategy(self, symbol, nombreStrategy):
         tick = mt5.symbol_info_tick(symbol)
         if(tick == None):
             print("tick en mt5 class is None",tick)
             return
         current_ask = tick.ask
         current_bid = tick.bid
+        
         orden_data = {
+            "date":Utils.dateprint(),
             "symbol": symbol,
             "current_ask": current_ask,
             "current_bid": current_bid,
-            "valores": valores,
-            "tpList": tpList,
             "nombreStrategy": nombreStrategy
         }
         self.parameterStore.add_to_list(STORE_PROPERTIES.TEST_LIST.value, orden_data)
+        
+    def save_in_log(self, log):
+        date = Utils.dateprint()
+        log["date"] = date  # Añadir la fecha al diccionario
+        print("Save logger",log)
+        self.parameterStore.add_to_list(STORE_PROPERTIES.LOG_LIST.value, log)
     
     def handle_order(self, valores, symbol, risk, tpList, nombreStrategy,id_order):
         print("handle_order", valores)
@@ -471,6 +484,7 @@ class MetaTrader5Broker():
                 "nombreStrategy": nombreStrategy,
                 }
             self.parameterStore.add_to_list(STORE_PROPERTIES.ORDERS_OPEN_PENDINGS_LIST.value, orden_data)
+            self.save_in_log(orden_data)
             
     def get_positions_open(self):
         # Obtener posiciones abiertas

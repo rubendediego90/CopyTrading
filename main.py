@@ -5,10 +5,11 @@ from telethon.sync import TelegramClient
 from telethon import events
 from constantes.grupos import GROUPS
 from constantes.canals import CANALS
-from constantes.config_comment import CONFIG_COMMENT,CONFIG_NAME_STRATEGY
+from constantes.config_comment import CONFIG_NAME_STRATEGY
 from utils.groups_canals import CanalsYGroups
 from handlers.vlad_signals import VladSignal
 from handlers.sinpers_gold import SnipersGold
+from handlers.us30_pro import US30ProSignal
 from handlers.ptjg_gold import PtjgGold
 from brokers.MetaTrader5_broker import MetaTrader5Broker
 from store.orders_store import ParameterStore
@@ -37,7 +38,8 @@ chats_a_escuchar = [
     int(CANALS.CRIPTO_SENIALES),
     int(CANALS.SNIPERS_GOLD_VIP),
     int(CANALS.PTJG_GOLD_PUBLIC),
-    #int(CANALS.SNIPERS_GOLD_PUBLIC),
+    int(CANALS.US30_PRO),
+    int(CANALS.SNIPERS_GOLD_PUBLIC),
     int(GROUPS.TEST),
 ]
 
@@ -53,28 +55,42 @@ async def manejador_mensajes(event):
     mensaje = event.raw_text
     await canalsYGroups.msgLog(event)
 
-    print("es lobo?", chat_id == int(CANALS.BIT_LOBO))
-    print("es vlad?", chat_id == int(CANALS.SIGNAL_VLAD))
-    print("es señales nuevo?", chat_id == int(CANALS.CRIPTO_SENIALES))
-    print("esgold vip?", chat_id == int(CANALS.SNIPERS_GOLD_VIP))
-    print("esgold public?", chat_id == int(CANALS.SNIPERS_GOLD_PUBLIC))
-    print("es ptjg public?", chat_id == int(CANALS.PTJG_GOLD_PUBLIC))
-    print("es TEST?", chat_id == int(GROUPS.TEST))
-    
     #validar que se pueden abrir nuevas ordenes
     if(can_open_global == False): return
     
     #Setear id_order
     id_order = param_store.get(STORE_PROPERTIES.ID_ORDER.value)
     id_order = id_order + 1
+    if(id_order == 1000) : id_order = 1
     param_store.set(STORE_PROPERTIES.ID_ORDER.value, id_order)
 
     if chat_id == int(GROUPS.TEST):
         
+        nasPro = US30ProSignal(brokerInstance,f"{CONFIG_NAME_STRATEGY.US30_PRO.value}",id_order)
+        nasPro.handle(mensaje)
+
+        '''
         #SnipersGold(brokerInstance, f"{CONFIG_NAME_STRATEGY.SNIPERS_GOLD_VIP.value}{CONFIG_COMMENT.AUTO_SL.value}").handle(mensaje, last_cash_balance)
         signalVlad = VladSignal(brokerInstance,f"{CONFIG_NAME_STRATEGY.VLAD.value}",id_order)
         signalVlad.handle(mensaje)
         signalVlad = None
+        '''
+        
+        if(mensaje == "print test") : 
+            print("**TEST LOG**")
+            log = param_store.get(STORE_PROPERTIES.TEST_LIST.value)
+            print(log)
+            return
+        if(mensaje == "print") : 
+            print("**TEST LOG**")
+            log = param_store.get(STORE_PROPERTIES.LOG_LIST.value)
+            print(log)
+            return
+        if(mensaje == "remove log") : 
+            print("**TEST LOG**")
+            log = param_store.remove_from_list(STORE_PROPERTIES.LOG_LIST.value)
+            print(log)
+            return
         #PtjgGold(brokerInstance,f"{CONFIG_NAME_STRATEGY.PTJG_GOLD_PUB.value}{CONFIG_COMMENT.AUTO_SL.value}").handle(mensaje, last_cash_balance)
         #SnipersGold(brokerInstance, "SNIPERS_GOLD_VIP").handle(mensaje, last_cash_balance)
 
@@ -87,12 +103,16 @@ async def manejador_mensajes(event):
         snipersGold.handle(mensaje)
         
     if chat_id == int(CANALS.PTJG_GOLD_PUBLIC):
-        ptjgGold = PtjgGold(brokerInstance, f"{CONFIG_NAME_STRATEGY.PTJG_GOLD_PUB.value}{CONFIG_COMMENT.AUTO_SL.value}",id_order)
+        ptjgGold = PtjgGold(brokerInstance, f"{CONFIG_NAME_STRATEGY.PTJG_GOLD_PUB.value}",id_order)
         ptjgGold.handle(mensaje)
 
     if chat_id == int(CANALS.SIGNAL_VLAD):
-        vladSignal = VladSignal(brokerInstance,f"{CONFIG_NAME_STRATEGY.VLAD.value}{CONFIG_COMMENT.AUTO_SL.value}",id_order)
+        vladSignal = VladSignal(brokerInstance,f"{CONFIG_NAME_STRATEGY.VLAD.value}",id_order)
         vladSignal.handle(mensaje)
+        
+    if chat_id == int(CANALS.US30_PRO):
+        nasPro = US30ProSignal(brokerInstance,f"{CONFIG_NAME_STRATEGY.US30_PRO.value}",id_order)
+        nasPro.handle(mensaje)
         
 def filtrar_tps_sin_tp1(comentarios):
     grupos = defaultdict(list)
@@ -151,23 +171,18 @@ def bucle_mensajes():
             comentario_positions_opens = [order.comment for order in positions_opens]
             comentarios_positions_and_orders = comentario_pendings_orders + comentario_positions_opens
             
-
-            #print("comentarios",comentarios)
             comentarios_sin_tp_1 = filtrar_tps_sin_tp1(comentario_positions_opens)
             comentarios_sin_tp_1_sin_duplicados = list(dict.fromkeys(comentarios_sin_tp_1))
-            print("comentarios sin tp1",comentarios_sin_tp_1_sin_duplicados)
             
             #comentarios a mover sl y a cerrar pendientes
             for comentario in comentarios_sin_tp_1_sin_duplicados:
                 positionsFiltered = [pos for pos in positions_opens if pos.comment == comentario]
-                print("positionsFiltered", positionsFiltered)
 
                 for position in positionsFiltered:
                     brokerInstance.mover_stop_loss_be_by_position(position)
 
                 #quitamos los 3 ultimos caracteres TP1 o TP2 o TPn
                 orders_pendings_Filtered = [order for order in orders_pendings if comentario[:-3] in order.comment]
-                print("orders_pendings_Filtered", orders_pendings_Filtered)
 
                 for order_pending in orders_pendings_Filtered:
                     brokerInstance.close_pending_by_order(order_pending)
@@ -176,11 +191,8 @@ def bucle_mensajes():
             itemsStored = param_store.get(STORE_PROPERTIES.ORDERS_OPEN_PENDINGS_LIST.value)
             comentarios_stored = obtener_comentarios(itemsStored)
             
-            print("comentarios_stored",comentarios_stored)
-            
             #compara las dos listas, y busca los comentarios que no estan
             comentarios_obsoletos = [item for item in comentarios_stored if item not in comentarios_positions_and_orders]
-            print("comentarios_obsoletos",comentarios_obsoletos)
             
             #borra comentarios obsoletos
             param_store.remove_from_list(

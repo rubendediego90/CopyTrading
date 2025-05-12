@@ -27,7 +27,7 @@ class VladSignal:
         
         if orders_type["hasMoveSL"]:
             print("ACTION - Mover SL")
-            self.brokerInstance.mover_stop_loss_be_by_symbol(symbol,self.comentario)
+            self.brokerInstance.mover_stop_loss_be_by_symbol(symbol=symbol,strategiaName=self.comentario)
             
         if orders_type["hasClosePartial"]:
             print("ACTION - Parcial")

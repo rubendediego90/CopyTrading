@@ -1,9 +1,9 @@
-from constantes.types import PTJG_GOLD, SYMBOL
+from constantes.types import US30PRO, SYMBOL
 import re
 from brokers.MetaTrader5_broker import MetaTrader5Broker
 from utils.common import Common
 
-class PtjgGold:
+class US30ProSignal:
     def __init__(self, brokerInstance : MetaTrader5Broker, comentario,id_order):
         self.brokerInstance : MetaTrader5Broker = brokerInstance
         self.RISK = 0.005
@@ -12,7 +12,7 @@ class PtjgGold:
         pass
         
     def handle(self,msg):
-        print('*Snipers Gold*',msg)
+        print('*US 30 PRO*',msg)
         symbol = self.getSymbol(msg)
         if(symbol == None):
             print('mensaje sin identificar simbolo',msg)
@@ -29,10 +29,6 @@ class PtjgGold:
             valores = self.extraer_valores(msg)
             tpList = valores['TP']
             self.brokerInstance.handle_order(valores=valores,symbol=symbol,risk=self.RISK,tpList=tpList,nombreStrategy=self.comentario, id_order=self.id_order)
-            return
-               
-        if orders_type["testentrarantes"]:
-            print("Entra en previa comentarrio anterior")
             self.brokerInstance.test_strategy(symbol=symbol,nombreStrategy=self.comentario)
             return
         
@@ -40,50 +36,33 @@ class PtjgGold:
     def getSymbol(self, msg):
         msg = msg.lower()
         if (
-            PTJG_GOLD.XAU.lower() in msg or 
-            PTJG_GOLD.XAUUSD.lower() in msg or
-            PTJG_GOLD.ORO.lower() in msg or
-            PTJG_GOLD.GOLD.lower() in msg
+            US30PRO.US30.lower() in msg
         ):
-            return SYMBOL.ORO.value
+            return SYMBOL.US30.value
         return None
     
     def getOrderType(self,msg):
-        words_open = ["tp","ahora","sl"]
-        words_test_entra_antes_sell = ["vendo oro ahora"]
-        words_test_entra_antes_buy = ["compro oro ahora"]
+        words_open = ["tp","sl"]
 
         msg_lower = msg.lower()
         words_open_lower = [p.lower() for p in words_open]
-        words_test_entra_antes_sell_lower = [p.lower() for p in words_test_entra_antes_sell]
-        words_test_entra_antes_buy_lower = [p.lower() for p in words_test_entra_antes_buy]
         
         hasNewOrder = False
-        testentrarantes = False
         
-        if ((all(palabra in msg_lower for palabra in words_test_entra_antes_sell_lower) or 
-        all(palabra in msg_lower for palabra in words_test_entra_antes_buy_lower))and not 
-            all(palabra in msg_lower for palabra in words_open_lower)):
-            testentrarantes = True
-            
-        
-
         if all(palabra in msg_lower for palabra in words_open_lower):
             hasNewOrder = True
             
         return {
             "hasNewOrder": hasNewOrder,
-            "testentrarantes":testentrarantes
             
         }
         
     #TODO revisar
     def extraer_valores(self, texto):
         patrones = {
-            "SL": r"\bSL[:\-]?\s*([\d.,]+[KkMmBb]?)",  # Añadido para manejar 'K', 'M', 'B'
-            "TP": r"\bTP[:\-]?\s*([\d.,]+[KkMmBb]?)",
-            "Entry": r"\b(?:ahora)[:\-]?\s*([\d.,]+[KkMmBb]?)",
-            "rango":r"([\d.,]+[KkMmBb]?)\s*(?:a|-|~)\s*([\d.,]+[KkMmBb]?)"
+            "SL": r"\bSL\s+([\d.,]+[KkMmBb]?)",
+            "TP": r"\bTP\s+([\d.,]+[KkMmBb]?)",
+            "Entry": r"\b(?:|BUY|SELL)\s+([\d.,]+[KkMmBb]?)",
         }
 
         resultados = {
@@ -91,7 +70,6 @@ class PtjgGold:
                       'SL': None,
                       'isShort':None,
                       'isLong':None,
-                      'rango': None,  # Nuevo campo para almacenar el rango,
                       'rango_inferior':None,
                       'rango_superior':None,
                       }
@@ -103,13 +81,6 @@ class PtjgGold:
             coincidencias = re.findall(patron, texto, flags=re.IGNORECASE)
             extracciones[clave] = coincidencias if coincidencias else None
             
-        if extracciones['rango'] and len(extracciones['rango'][0]) == 2:
-            extracciones['rango_inferior'] = [extracciones['rango'][0][0]]
-            extracciones['rango_superior'] = [extracciones['rango'][0][1]]
-        extracciones['rango'] = None 
-        
-        print("extracciones",extracciones)
-
         # Ahora, limpiamos (casteamos) los valores extraídos
         for clave, coincidencias in extracciones.items():
             if coincidencias:

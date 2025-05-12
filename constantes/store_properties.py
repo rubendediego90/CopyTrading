@@ -6,6 +6,7 @@ class STORE_PROPERTIES(str,Enum):
     ORDERS_OPEN_PENDINGS_LIST="orders_pendinges_list"
     ID_ORDER="id_order"
     TEST_LIST="test_list"
+    LOG_LIST="log_list"
     
     
 

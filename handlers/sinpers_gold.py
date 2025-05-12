@@ -25,6 +25,11 @@ class SnipersGold:
         
         print("order typs",orders_type)
         
+        if orders_type["testentrarantes"]:
+            print("prueba anterior comentario")
+            self.brokerInstance.test_strategy(symbol=symbol,nombreStrategy=self.comentario)
+            return
+        
         if orders_type["hasNewOrder"]:
             print("ACTION - Nueva orden")
             
@@ -37,7 +42,8 @@ class SnipersGold:
         
         if orders_type["hasMoveSL"]:
             print("ACTION - Mueve stop loss")
-            self.brokerInstance.mover_stop_loss_be_by_symbol(symbol=symbol,nombre_estrategia=self.comentario)
+            sl_value = self.getNewSlValue(msg)
+            self.brokerInstance.mover_stop_loss_be_by_symbol(symbol=symbol,strategiaName=self.comentario, newPrice=sl_value)
             return
         
         if orders_type["hasClosePendings"]:
@@ -48,7 +54,7 @@ class SnipersGold:
     def getSymbol(self,msg):
         print("SYMBOLS_SNIPERS_GOLD.XAU.lower()",SYMBOLS_SNIPERS_GOLD.XAU.lower())
         print("msg.lower())",msg.lower())
-        if SYMBOLS_SNIPERS_GOLD.XAU.lower() in msg.lower() or SYMBOLS_SNIPERS_GOLD.XAUUSD.lower() in msg.lower():
+        if SYMBOLS_SNIPERS_GOLD.XAU.lower() in msg.lower() or SYMBOLS_SNIPERS_GOLD.XAUUSD.lower() in msg.lower() or SYMBOLS_SNIPERS_GOLD.GOLD.lower() in msg.lower():
             return SYMBOL.ORO.value
         
         if SYMBOLS_SNIPERS_GOLD.BTC.lower() in msg.lower() or SYMBOLS_SNIPERS_GOLD.BITCOIN.lower() in msg.lower():
@@ -56,10 +62,18 @@ class SnipersGold:
         
         return None
     
+    def getNewSlValue(self,msg):
+        coincidencia = re.search(r" sl to\s+(\d+)", msg)
+        if coincidencia:
+            return int(coincidencia.group(1))
+        return None
+    
     def getOrderType(self,msg):
         words_open = ["tp","entry","sl"]
         words_be = ["tp2//","set breakeven"]
         words_be_2 = ["tp2","hit"]
+        words_test_entra_antes_sell = ["scalping sell gold"]
+        words_test_entra_antes_buy = ["scalping buy gold"]
         words_delete_pendings_1 = ["tp1//","pips"]
         words_delete_pendings_2 = ["tp2//","pips"]
 
@@ -69,11 +83,19 @@ class SnipersGold:
         words_close_pendings_2_lower = [p.lower() for p in words_delete_pendings_2]
         words_move_sl_lower = [p.lower() for p in words_be]
         words_move_sl_2_lower = [p.lower() for p in words_be_2]
+        words_test_entra_antes_sell_lower = [p.lower() for p in words_test_entra_antes_sell]
+        words_test_entra_antes_buy_lower = [p.lower() for p in words_test_entra_antes_buy]
         
         hasNewOrder = False
         hasMoveSL = False
         hasClosePendings = False
+        testentrarantes = False
 
+        if ((all(palabra in msg_lower for palabra in words_test_entra_antes_sell_lower) or 
+        all(palabra in msg_lower for palabra in words_test_entra_antes_buy_lower))and not 
+            all(palabra in msg_lower for palabra in words_open_lower)):
+            testentrarantes = True
+            
         if all(palabra in msg_lower for palabra in words_open_lower):
             hasNewOrder = True
             
@@ -89,6 +111,7 @@ class SnipersGold:
             "hasNewOrder": hasNewOrder,
             "hasMoveSL": hasMoveSL,
             "hasClosePendings": hasClosePendings,
+            "testentrarantes":testentrarantes
         }
         
     #TODO revisar

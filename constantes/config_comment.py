@@ -8,9 +8,7 @@ class CONFIG_NAME_STRATEGY(str,Enum):
     SNIPERS_GOLD_VIP = "SPGV"
     SNIPERS_GOLD_PUB = "SPGP"
     VLAD = "VLAD"
-
-
-    
+    US30_PRO = "U30P"
 
     
 

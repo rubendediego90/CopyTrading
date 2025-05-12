@@ -6,6 +6,7 @@ class SYMBOL(str,Enum):
     ETH = "ETHUSD"
     SP500 = "US500.cash"
     NASDAQ = "US100.cash"
+    US30 = "US30.cash"
     #LIBRA_USD = "GBPUSD=X"
     #EURO_USD = "EURUSD=X"
     
@@ -21,6 +22,7 @@ class SYMBOLS_VLAD(str,Enum):
 class SYMBOLS_SNIPERS_GOLD(str,Enum):
     XAU = "XAU"
     XAUUSD = "XAUUSD"
+    GOLD = "GOLD"
     BTC = "BTC"
     BITCOIN = "BITCOIN"
     
@@ -29,6 +31,9 @@ class PTJG_GOLD(str,Enum):
     GOLD = "GOLD"
     XAU = "XAU"
     XAUUSD = "XAUUSD"
+    
+class US30PRO(str,Enum):
+    US30 = "US30"
 
     
 

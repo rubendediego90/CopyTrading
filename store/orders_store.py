@@ -57,10 +57,13 @@ class ParameterStore:
         self._save_parameters()
 
     # ✅ Eliminar una orden de la lista según una condición
-    def remove_from_list(self, key, filter_func):
+    def remove_from_list(self, key, filter_func=None):
         if key in self.parameters:
             original = self.parameters[key]
-            filtered = [item for item in original if not filter_func(item)]
+            if filter_func is not None:
+                filtered = [item for item in original if not filter_func(item)]
+            else:
+                filtered = []  # Sin filtro: se eliminan todos los elementos
             self.parameters[key] = filtered
             self._save_parameters()
             
