@@ -379,7 +379,7 @@ class MetaTrader5Broker():
         stop_loss = valores["SL"]
 
         def enviar_ordenes_market(lotes, signal_type,perdida,entry_price):
-            for i, tp in enumerate(tpList, start=0):
+            for i, tp in enumerate(tpList, start=1):
                 comment = self.setComment(nombreStrategy=nombreStrategy,id_order=id_order,num=i)
                 order = OrderEvent(
                     symbol=symbol,

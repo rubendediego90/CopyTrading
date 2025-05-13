@@ -15,8 +15,6 @@ from brokers.MetaTrader5_broker import MetaTrader5Broker
 from store.orders_store import ParameterStore
 from utils.ftmo_utils import FTMOUtils
 from constantes.store_properties import STORE_PROPERTIES
-import re
-from collections import defaultdict
 
 # ✅ Cargamos las variables de entorno
 a = os.getenv("MT5_PATH")
@@ -66,8 +64,8 @@ async def manejador_mensajes(event):
 
     if chat_id == int(GROUPS.TEST):
         
-        nasPro = US30ProSignal(brokerInstance,f"{CONFIG_NAME_STRATEGY.US30_PRO.value}",id_order)
-        nasPro.handle(mensaje)
+        snipersGold = SnipersGold(brokerInstance, f"{CONFIG_NAME_STRATEGY.SNIPERS_GOLD_VIP.value}",id_order)
+        snipersGold.handle(mensaje)
 
         '''
         #SnipersGold(brokerInstance, f"{CONFIG_NAME_STRATEGY.SNIPERS_GOLD_VIP.value}{CONFIG_COMMENT.AUTO_SL.value}").handle(mensaje, last_cash_balance)
@@ -91,8 +89,6 @@ async def manejador_mensajes(event):
             log = param_store.remove_from_list(STORE_PROPERTIES.LOG_LIST.value)
             print(log)
             return
-        #PtjgGold(brokerInstance,f"{CONFIG_NAME_STRATEGY.PTJG_GOLD_PUB.value}{CONFIG_COMMENT.AUTO_SL.value}").handle(mensaje, last_cash_balance)
-        #SnipersGold(brokerInstance, "SNIPERS_GOLD_VIP").handle(mensaje, last_cash_balance)
 
     if chat_id == int(CANALS.SNIPERS_GOLD_VIP):
         snipersGold = SnipersGold(brokerInstance, f"{CONFIG_NAME_STRATEGY.SNIPERS_GOLD_VIP.value}",id_order)
@@ -114,91 +110,17 @@ async def manejador_mensajes(event):
         nasPro = US30ProSignal(brokerInstance,f"{CONFIG_NAME_STRATEGY.US30_PRO.value}",id_order)
         nasPro.handle(mensaje)
         
-def filtrar_tps_sin_tp1(comentarios):
-    grupos = defaultdict(list)
-
-    for comentario in comentarios:
-        match = re.match(r'(.*)_TP(\d+)', comentario)
-        if match:
-            prefix, tp_num = match.groups()
-            grupos[prefix].append((int(tp_num), comentario))
-
-    resultado = []
-
-    for prefix, tps in grupos.items():
-        tp_nums = [tp[0] for tp in tps]
-        if 1 not in tp_nums:
-            ordenados = sorted(tps)
-            resultado.extend([tp[1] for tp in ordenados])
-
-    return resultado
-
-def obtener_comentarios(items):
-    return [item['comentario'] for item in items if 'comentario' in item]
-
 # ✅ HILO SECUNDARIO – imprime mensaje cada 5 segundos
 def bucle_mensajes():
-    can_open_time = 0
-    can_opem_time_default = 60
     move_sl_auto_time = 0
     move_sl_auto_time_default = 15
     global can_open_global 
+    ftmo_utils = FTMOUtils()
     while True:
         move_sl_auto_time = move_sl_auto_time + 1
         
-        #chequa si se puede abrir una nueva operacion
-        #todo borrar
-        if(can_open_time == can_opem_time_default):
-            current_cash_balance = brokerInstance.getBalanceCash()
-            ftmo_utils = FTMOUtils()
-            
-            #setea fecha y valor, se hace una vez al dia
-            ftmo_utils.set_balance_data(current_cash_balance)
-            
-            #evalua si se puede abrir orden
-            can_open_global = ftmo_utils.can_open_new_position(current_cash_balance)
-            ftmo_utils = None
-            can_open_time = 0
-            print("🟢 se puede abrir la operacion?")
-            
-            
         if(move_sl_auto_time == move_sl_auto_time_default):
-            #traer lista de ordenes abiertas y pendientes
-            orders_pendings = brokerInstance.get_orders_pendings()
-            positions_opens = brokerInstance.get_positions_open()
-            
-            comentario_pendings_orders = [order.comment for order in orders_pendings]
-            comentario_positions_opens = [order.comment for order in positions_opens]
-            comentarios_positions_and_orders = comentario_pendings_orders + comentario_positions_opens
-            
-            comentarios_sin_tp_1 = filtrar_tps_sin_tp1(comentario_positions_opens)
-            comentarios_sin_tp_1_sin_duplicados = list(dict.fromkeys(comentarios_sin_tp_1))
-            
-            #comentarios a mover sl y a cerrar pendientes
-            for comentario in comentarios_sin_tp_1_sin_duplicados:
-                positionsFiltered = [pos for pos in positions_opens if pos.comment == comentario]
-
-                for position in positionsFiltered:
-                    brokerInstance.mover_stop_loss_be_by_position(position)
-
-                #quitamos los 3 ultimos caracteres TP1 o TP2 o TPn
-                orders_pendings_Filtered = [order for order in orders_pendings if comentario[:-3] in order.comment]
-
-                for order_pending in orders_pendings_Filtered:
-                    brokerInstance.close_pending_by_order(order_pending)
-                    
-            #clean store sincronizar store y ordenes y posiciones
-            itemsStored = param_store.get(STORE_PROPERTIES.ORDERS_OPEN_PENDINGS_LIST.value)
-            comentarios_stored = obtener_comentarios(itemsStored)
-            
-            #compara las dos listas, y busca los comentarios que no estan
-            comentarios_obsoletos = [item for item in comentarios_stored if item not in comentarios_positions_and_orders]
-            
-            #borra comentarios obsoletos
-            param_store.remove_from_list(
-                STORE_PROPERTIES.ORDERS_OPEN_PENDINGS_LIST.value,
-                lambda item: item.get("comentario") in comentarios_obsoletos
-            )
+            ftmo_utils.auto_sl(brokerInstance=brokerInstance)
             move_sl_auto_time = 0
             
         time.sleep(1)

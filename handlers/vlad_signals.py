@@ -31,7 +31,7 @@ class VladSignal:
             
         if orders_type["hasClosePartial"]:
             print("ACTION - Parcial")
-            percentage = Common.extraer_porcentaje(msg)
+            percentage = Common.extraer_porcetaje(texto=msg)
             self.brokerInstance.close_partial(symbol,self.comentario,partial=percentage)
             
         if orders_type["hasMoveSL"] or orders_type["hasClosePartial"]:
