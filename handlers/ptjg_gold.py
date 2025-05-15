@@ -6,7 +6,6 @@ from utils.common import Common
 class PtjgGold:
     def __init__(self, brokerInstance : MetaTrader5Broker, comentario,id_order):
         self.brokerInstance : MetaTrader5Broker = brokerInstance
-        self.RISK = 0.005
         self.comentario = comentario
         self.id_order = id_order
         pass
@@ -28,7 +27,7 @@ class PtjgGold:
             
             valores = self.extraer_valores(msg)
             tpList = valores['TP']
-            self.brokerInstance.handle_order(valores=valores,symbol=symbol,risk=self.RISK,tpList=tpList,nombreStrategy=self.comentario, id_order=self.id_order)
+            self.brokerInstance.handle_order(valores=valores,symbol=symbol,tpList=tpList,nombreStrategy=self.comentario, id_order=self.id_order)
             return
                
         if orders_type["testentrarantes"]:

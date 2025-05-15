@@ -6,7 +6,6 @@ from utils.common import Common
 class SnipersGold:
     def __init__(self, brokerInstance : MetaTrader5Broker, comentario,id_order):
         self.brokerInstance : MetaTrader5Broker = brokerInstance
-        self.RISK = 0.005
         self.comentario = comentario
         self.id_order = id_order
         pass
@@ -33,7 +32,7 @@ class SnipersGold:
             tpList = valores['TP']
             print("tpList",tpList)
             entries_distribution = Common.cal_entries_distribution(valores,distribution_param=[0,0,1,1,2])
-            self.brokerInstance.handle_order(valores=valores,symbol=symbol,risk=self.RISK,tpList=tpList,
+            self.brokerInstance.handle_order(valores=valores,symbol=symbol,tpList=tpList,
                                              nombreStrategy=self.comentario,id_order=self.id_order,entry_prices_distribution=entries_distribution)
             return
         
@@ -57,16 +56,17 @@ class SnipersGold:
         
         return None
     
-    def getNewSlValue(self,msg):
-        coincidencia = re.search(r" sl to\s+(\d+)", msg)
+
+    def getNewSlValue(self, msg):
+        # Usamos re.IGNORECASE para no distinguir entre mayúsculas y minúsculas
+        coincidencia = re.search(r" sl to\s+(\d+)", msg, re.IGNORECASE)
         if coincidencia:
             return int(coincidencia.group(1))
         return None
         
     def getOrderType(self,msg):
         words_open = ["tp","entry","sl"]
-        words_be = ["tp2//","set breakeven"]
-        words_be_2 = ["tp2","hit"]
+        words_move_sl = ["sl","move", "to"]
         words_test_entra_antes_sell = ["scalping sell gold"]
         words_test_entra_antes_buy = ["scalping buy gold"]
         words_delete_pendings_1 = ["rabooooo"]
@@ -77,8 +77,7 @@ class SnipersGold:
         words_open_lower = [p.lower() for p in words_open]
         words_close_pendings_1_lower = [p.lower() for p in words_delete_pendings_1]
         words_close_pendings_2_lower = [p.lower() for p in words_delete_pendings_2]
-        words_move_sl_lower = [p.lower() for p in words_be]
-        words_move_sl_2_lower = [p.lower() for p in words_be_2]
+        words_move_sl_lower = [p.lower() for p in words_move_sl]
         words_test_entra_antes_sell_lower = [p.lower() for p in words_test_entra_antes_sell]
         words_test_entra_antes_buy_lower = [p.lower() for p in words_test_entra_antes_buy]
         
@@ -95,8 +94,7 @@ class SnipersGold:
         if all(palabra in msg_lower for palabra in words_open_lower):
             hasNewOrder = True
             
-        if all((palabra in msg_lower for palabra in words_move_sl_lower) or
-        all(palabra in msg_lower for palabra in words_move_sl_2_lower)):
+        if all(palabra in msg_lower for palabra in words_move_sl_lower):
             hasMoveSL = True
             
         if (all(palabra in msg_lower for palabra in words_close_pendings_1_lower) or

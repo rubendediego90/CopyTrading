@@ -6,7 +6,6 @@ from utils.common import Common
 class VladSignal:
     def __init__(self, brokerInstance : MetaTrader5Broker,comentario, id_order):
         self.brokerInstance : MetaTrader5Broker = brokerInstance
-        self.RISK = 0.005
         self.comentario = comentario
         self.id_order = id_order
         pass
@@ -45,7 +44,7 @@ class VladSignal:
             if(valores['TP2'] != None):tpList.append(valores['TP2'])
             if(valores['TP3'] != None):tpList.append(valores['TP3'])
             entries_distribution = Common.cal_entries_distribution(valores,distribution_param=[1,1,1,1,1])
-            self.brokerInstance.handle_order(valores=valores,symbol=symbol,risk=self.RISK,tpList=tpList,nombreStrategy=self.comentario,id_order=self.id_order,
+            self.brokerInstance.handle_order(valores=valores,symbol=symbol,tpList=tpList,nombreStrategy=self.comentario,id_order=self.id_order,
                                              entry_prices_distribution=entries_distribution)
             return
 

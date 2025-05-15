@@ -6,7 +6,6 @@ from utils.common import Common
 class US30ProSignal:
     def __init__(self, brokerInstance : MetaTrader5Broker, comentario,id_order):
         self.brokerInstance : MetaTrader5Broker = brokerInstance
-        self.RISK = 0.005
         self.comentario = comentario
         self.id_order = id_order
         pass
@@ -32,7 +31,7 @@ class US30ProSignal:
             valores = Common.setRange(valores,percentage=20)
             entries_distribution = Common.cal_entries_distribution(valores,distribution_param=[1,1,1])
             print("entries_distribution",entries_distribution)
-            self.brokerInstance.handle_order(valores=valores,symbol=symbol,risk=self.RISK,tpList=tpList,nombreStrategy=self.comentario,
+            self.brokerInstance.handle_order(valores=valores,symbol=symbol,tpList=tpList,nombreStrategy=self.comentario,
                                              id_order=self.id_order,entry_prices_distribution=entries_distribution)
             self.brokerInstance.test_strategy(symbol=symbol,nombreStrategy=self.comentario)
             return

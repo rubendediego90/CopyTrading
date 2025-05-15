@@ -5,7 +5,8 @@ from utils.utils import Utils
 from event.events import OrderEvent,OrderType,SignalType
 from store.orders_store import ParameterStore
 from constantes.store_properties import STORE_PROPERTIES
-
+from utils.estrategias_config import EstrategiasConfig
+from constantes.config_comment import CONFIG_STRATEGY_PROPERTIES
 class MetaTrader5Broker():
     
     def __init__(self):
@@ -27,6 +28,7 @@ class MetaTrader5Broker():
         #Informacion por consola
         self._set_account_info()
         self.print_account_info()
+        self.estrategiasConfig = EstrategiasConfig()
         
         #self._get_symbols_in_marketwatch()
         
@@ -247,10 +249,8 @@ class MetaTrader5Broker():
             "deviation": 0,  # Desviación permitida en puntos
             "comment": position.comment
         }
-
         # Enviar la solicitud de modificación de orden
         result = mt5.order_send(request)
-
         if self._check_execution_status(result):
             print(f"{Utils.dateprint()} - Posición con ticket {position.ticket} en {position.symbol} se ha movido el STOP Loss a BE correctamente")
         else:
@@ -302,16 +302,13 @@ class MetaTrader5Broker():
     def close_pending(self, symbol, nombre_estrategia):
     # Obtener las órdenes pendientes
         orders = mt5.orders_get()
-        
         if orders is None or len(orders) == 0:
             print("No hay órdenes pendientes")
             return
-        item_order = self.parameterStore.get_first_from_list(STORE_PROPERTIES.ORDERS_OPEN_PENDINGS_LIST.value, lambda item: item.get("symbol") == symbol and item.get("nombreStrategy") == nombre_estrategia)
-        if(item_order == None): return
         
         # Buscar la orden que deseas eliminar
         for order in orders:
-            if str(item_order["id_order"]) in order.comment.lower():
+            if symbol.lower() == order.symbol.lower() and nombre_estrategia.lower() in order.comment.lower():
               self.close_pending_by_order(order)
         
     def close_pending_by_order(self, order):
@@ -357,11 +354,15 @@ class MetaTrader5Broker():
     def save_in_log(self, log):
         pass
     
-    def handle_order(self, valores, symbol, risk, tpList, nombreStrategy,id_order,entry_prices_distribution):
-        print("handle_order", valores)
+    def handle_order(self, valores, symbol, tpList, nombreStrategy,id_order,entry_prices_distribution):
         #Cierra ordenes anteriores con mismo comentario
-        self.close_partial(symbol,nombre_estrategia=nombreStrategy,partial=100)
-        self.close_pending(symbol,nombre_estrategia=nombreStrategy)
+        close_open_in_new = self.estrategiasConfig.get(nombreStrategy,CONFIG_STRATEGY_PROPERTIES.CLOSE_OPENS_IN_NEW)
+        close_pendings_in_new = self.estrategiasConfig.get(nombreStrategy,CONFIG_STRATEGY_PROPERTIES.CLOSE_PENDIGNS_IN_NEW)
+        if(close_open_in_new): self.close_partial(symbol,nombre_estrategia=nombreStrategy,partial=100)
+        if(close_pendings_in_new): self.close_pending(symbol,nombre_estrategia=nombreStrategy)
+        
+        risk = self.estrategiasConfig.get(nombreStrategy,CONFIG_STRATEGY_PROPERTIES.RISK)
+        
         self.parameterStore.remove_from_list(STORE_PROPERTIES.ORDERS_OPEN_PENDINGS_LIST.value, lambda item: item.get("symbol") == symbol and item.get("nombreStrategy") == nombreStrategy)
         
         has_range = valores["rango_inferior"] is not None and valores["rango_superior"] is not None
