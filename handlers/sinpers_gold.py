@@ -32,8 +32,9 @@ class SnipersGold:
             valores = self.extraer_valores(msg)
             tpList = valores['TP']
             print("tpList",tpList)
-            print("valores",valores)
-            self.brokerInstance.handle_order(valores=valores,symbol=symbol,risk=self.RISK,tpList=tpList,nombreStrategy=self.comentario,id_order=self.id_order)
+            entries_distribution = Common.cal_entries_distribution(valores,distribution_param=[0,0,1,1,2])
+            self.brokerInstance.handle_order(valores=valores,symbol=symbol,risk=self.RISK,tpList=tpList,
+                                             nombreStrategy=self.comentario,id_order=self.id_order,entry_prices_distribution=entries_distribution)
             return
         
         if orders_type["hasMoveSL"]:
@@ -61,14 +62,14 @@ class SnipersGold:
         if coincidencia:
             return int(coincidencia.group(1))
         return None
-    
+        
     def getOrderType(self,msg):
         words_open = ["tp","entry","sl"]
         words_be = ["tp2//","set breakeven"]
         words_be_2 = ["tp2","hit"]
         words_test_entra_antes_sell = ["scalping sell gold"]
         words_test_entra_antes_buy = ["scalping buy gold"]
-        #words_delete_pendings_1 = ["rabooooo"]
+        words_delete_pendings_1 = ["rabooooo"]
         #words_delete_pendings_1 = ["tp1//","pips"]
         words_delete_pendings_2 = ["tp2//","pips"]
 
@@ -151,8 +152,6 @@ class SnipersGold:
                 # Si no encontramos coincidencias, asignamos None
                 resultados[clave] = None
                 
-
-            
         # Aquí procesamos las listas para devolver solo el primer valor o None si no existen
         for clave in resultados:
             if isinstance(resultados[clave], list) and len(resultados[clave]) > 0 and clave != "TP":
@@ -173,11 +172,3 @@ class SnipersGold:
 
 
         return resultados
-
-
-
-
-
-        
-
-    

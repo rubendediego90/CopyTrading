@@ -357,7 +357,7 @@ class MetaTrader5Broker():
     def save_in_log(self, log):
         pass
     
-    def handle_order(self, valores, symbol, risk, tpList, nombreStrategy,id_order):
+    def handle_order(self, valores, symbol, risk, tpList, nombreStrategy,id_order,entry_prices_distribution):
         print("handle_order", valores)
         #Cierra ordenes anteriores con mismo comentario
         self.close_partial(symbol,nombre_estrategia=nombreStrategy,partial=100)
@@ -431,8 +431,7 @@ class MetaTrader5Broker():
             symbol=symbol,
             risk=risk,
             sl=stop_loss,
-            rango_superior=rango_superior,
-            rango_inferior=rango_inferior,
+            entry_prices_distribution=entry_prices_distribution,
             tpList=tpList,
             isLong=is_long,
             isShort=is_short,
@@ -490,48 +489,38 @@ class MetaTrader5Broker():
             return orders
     
     
-    def handle_order_pending(self,symbol,risk,sl,tpList,rango_superior,rango_inferior,isShort,isLong,tick_symbol,nombreStrategy,id_order):
-        NUM_ORDERS = 5 #TODO sacar fuera
+    def handle_order_pending(self,symbol,risk,sl,tpList,entry_prices_distribution,isShort,isLong,tick_symbol,nombreStrategy,id_order):
         RISK_PERCENT = risk  # % de riesgo por operación
         STOP_LOSS_PRICE = sl # SL absoluto (ej. 2000)
-        PRICE_MIN = rango_inferior
-        PRICE_MAX = rango_superior
         take_profits = tpList  # TPs por entrada
 
-        # === CALCULAR PRECIOS DE ENTRADA ===
-        step = (PRICE_MAX - PRICE_MIN) / (NUM_ORDERS - 1)
-        entry_prices = [round(PRICE_MIN + i * step, 2) for i in range(NUM_ORDERS)]
-        
-        #si llega al extremo contrario no seria buena señal, se elimina para distribuir mejor los lotes
-        if isShort and entry_prices:
-            entry_prices.remove(max(entry_prices))
-
-        if isLong and entry_prices:
-            entry_prices.remove(min(entry_prices))
-        
-        print("entry_prices",entry_prices)
+        print("entry_prices",entry_prices_distribution)
         
         # === ENVIAR TODAS LAS ÓRDENES ===
         tick = tick_symbol
         current_ask = tick.ask
         current_bid = tick.bid
 
-        for entry in entry_prices:
+        for entry_distribution in entry_prices_distribution:
+            #todo sera una lista en la que vendra el x del lote y el precio de entrada
+            ENTRY = entry_distribution['entry']
+            DISTRIBUTION_LOTE = entry_distribution['distribution']
             for i, tp in enumerate(take_profits, start=1):
                 comment = self.setComment(nombreStrategy=nombreStrategy,id_order=id_order,num=i)
-                lot = self.calc_lotes(entry=entry, sl=STOP_LOSS_PRICE,risk=RISK_PERCENT / (len(entry_prices)),numTP=len(take_profits))
+                lot = self.calc_lotes(entry=ENTRY, sl=STOP_LOSS_PRICE,risk=RISK_PERCENT / (len(entry_prices_distribution)),numTP=len(take_profits))
+                lot_with_distribution = lot*DISTRIBUTION_LOTE
 
                 # === BUY PENDINGS ===
-                if entry > current_ask and isLong:
-                    self.send_pending_order(symbol,mt5.ORDER_TYPE_BUY_STOP, entry, STOP_LOSS_PRICE, tp, lot,comment,i,nombreStrategy,id_order)
-                elif entry < current_ask and isLong:
-                    self.send_pending_order(symbol,mt5.ORDER_TYPE_BUY_LIMIT, entry, STOP_LOSS_PRICE, tp, lot,comment,i,nombreStrategy,id_order)
+                if ENTRY > current_ask and isLong:
+                    self.send_pending_order(symbol,mt5.ORDER_TYPE_BUY_STOP, ENTRY, STOP_LOSS_PRICE, tp, lot_with_distribution,comment,i,nombreStrategy,id_order)
+                elif ENTRY < current_ask and isLong:
+                    self.send_pending_order(symbol,mt5.ORDER_TYPE_BUY_LIMIT, ENTRY, STOP_LOSS_PRICE, tp, lot_with_distribution,comment,i,nombreStrategy,id_order)
 
                 # === SELL PENDINGS ===
-                if entry < current_bid and isShort:
-                    self.send_pending_order(symbol,mt5.ORDER_TYPE_SELL_STOP, entry, STOP_LOSS_PRICE, tp, lot,comment,i,nombreStrategy,id_order)
-                elif entry > current_bid and isShort:
-                    self.send_pending_order(symbol,mt5.ORDER_TYPE_SELL_LIMIT, entry, STOP_LOSS_PRICE, tp, lot,comment,i,nombreStrategy,id_order)
+                if ENTRY < current_bid and isShort:
+                    self.send_pending_order(symbol,mt5.ORDER_TYPE_SELL_STOP, ENTRY, STOP_LOSS_PRICE, tp, lot_with_distribution,comment,i,nombreStrategy,id_order)
+                elif ENTRY > current_bid and isShort:
+                    self.send_pending_order(symbol,mt5.ORDER_TYPE_SELL_LIMIT, ENTRY, STOP_LOSS_PRICE, tp, lot_with_distribution,comment,i,nombreStrategy,id_order)
        
 
 

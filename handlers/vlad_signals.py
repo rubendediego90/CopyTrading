@@ -44,7 +44,9 @@ class VladSignal:
             tpList = [valores['TP1']]
             if(valores['TP2'] != None):tpList.append(valores['TP2'])
             if(valores['TP3'] != None):tpList.append(valores['TP3'])
-            self.brokerInstance.handle_order(valores=valores,symbol=symbol,risk=self.RISK,tpList=tpList,nombreStrategy=self.comentario,id_order=self.id_order)
+            entries_distribution = Common.cal_entries_distribution(valores,distribution_param=[1,1,1,1,1])
+            self.brokerInstance.handle_order(valores=valores,symbol=symbol,risk=self.RISK,tpList=tpList,nombreStrategy=self.comentario,id_order=self.id_order,
+                                             entry_prices_distribution=entries_distribution)
             return
 
     def getSymbol(self,msg):

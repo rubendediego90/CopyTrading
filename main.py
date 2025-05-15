@@ -35,14 +35,14 @@ chats_a_escuchar = [
     int(CANALS.SIGNAL_VLAD),
     int(CANALS.CRIPTO_SENIALES),
     int(CANALS.SNIPERS_GOLD_VIP),
-    int(CANALS.PTJG_GOLD_PUBLIC),
+    #int(CANALS.PTJG_GOLD_PUBLIC),
     int(CANALS.US30_PRO),
     int(CANALS.SNIPERS_GOLD_PUBLIC),
     int(GROUPS.TEST),
 ]
 
 param_store = ParameterStore()
-brokerInstance = MetaTrader5Broker(param_store)
+brokerInstance = MetaTrader5Broker()
 can_open_global = True
 
 # ✅ Manejo de mensajes
@@ -64,8 +64,19 @@ async def manejador_mensajes(event):
 
     if chat_id == int(GROUPS.TEST):
         
+        '''
+        signalVlad = VladSignal(brokerInstance,f"{CONFIG_NAME_STRATEGY.VLAD.value}",id_order)
+        signalVlad.handle(mensaje)
+        signalVlad = None
+        '''
+        
         snipersGold = SnipersGold(brokerInstance, f"{CONFIG_NAME_STRATEGY.SNIPERS_GOLD_VIP.value}",id_order)
         snipersGold.handle(mensaje)
+        
+        '''
+        nasPro = US30ProSignal(brokerInstance,f"{CONFIG_NAME_STRATEGY.US30_PRO.value}",id_order)
+        nasPro.handle(mensaje)
+        '''
 
         '''
         #SnipersGold(brokerInstance, f"{CONFIG_NAME_STRATEGY.SNIPERS_GOLD_VIP.value}{CONFIG_COMMENT.AUTO_SL.value}").handle(mensaje, last_cash_balance)
@@ -75,18 +86,8 @@ async def manejador_mensajes(event):
         '''
         
         if(mensaje == "print test") : 
-            print("**TEST LOG**")
+            print("**TEST LIST LOG**")
             log = param_store.get(STORE_PROPERTIES.TEST_LIST.value)
-            print(log)
-            return
-        if(mensaje == "print") : 
-            print("**TEST LOG**")
-            log = param_store.get(STORE_PROPERTIES.LOG_LIST.value)
-            print(log)
-            return
-        if(mensaje == "remove log") : 
-            print("**TEST LOG**")
-            log = param_store.remove_from_list(STORE_PROPERTIES.LOG_LIST.value)
             print(log)
             return
 
