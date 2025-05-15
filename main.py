@@ -69,14 +69,13 @@ async def manejador_mensajes(event):
         signalVlad.handle(mensaje)
         signalVlad = None
         '''
-        
+        '''
         snipersGold = SnipersGold(brokerInstance, f"{CONFIG_NAME_STRATEGY.SNIPERS_GOLD_VIP.value}",id_order)
         snipersGold.handle(mensaje)
-        
         '''
+        
         nasPro = US30ProSignal(brokerInstance,f"{CONFIG_NAME_STRATEGY.US30_PRO.value}",id_order)
         nasPro.handle(mensaje)
-        '''
 
         '''
         #SnipersGold(brokerInstance, f"{CONFIG_NAME_STRATEGY.SNIPERS_GOLD_VIP.value}{CONFIG_COMMENT.AUTO_SL.value}").handle(mensaje, last_cash_balance)

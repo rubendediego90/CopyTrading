@@ -54,6 +54,27 @@ class Common:
         else:
             return 50  # Si no se encuentra un porcentaje, devolver None
         
+    def setRange(valores, percentage):
+        # Verifica si rango_inferior o rango_superior son None
+        if valores["rango_inferior"] is None or valores["rango_superior"] is None:
+            # Determina si es Short o Long
+            isShort = valores["isShort"]
+            
+            # Si es Short, tomamos el valor máximo de TP; si es Long, el valor mínimo de TP
+            tpTipps = max(valores['TP']) if isShort else min(valores['TP'])
+            
+            # Calcular la diferencia absoluta en pipps
+            diff_pipps = abs(valores['Entry'] - tpTipps)
+            
+            # Calcular el porcentaje de esos pipps
+            diff_pipps_percentage = diff_pipps * percentage / 100
+            
+            # Calcular los valores del rango
+            valores["rango_inferior"] = valores['Entry']  - diff_pipps_percentage
+            valores["rango_superior"] = valores['Entry']  + diff_pipps_percentage
+        
+        return valores
+
 
     '''
     entry_prices = [3185,3190,3205, 3210]

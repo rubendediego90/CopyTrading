@@ -28,7 +28,12 @@ class US30ProSignal:
             
             valores = self.extraer_valores(msg)
             tpList = valores['TP']
-            self.brokerInstance.handle_order(valores=valores,symbol=symbol,risk=self.RISK,tpList=tpList,nombreStrategy=self.comentario, id_order=self.id_order)
+                       
+            valores = Common.setRange(valores,percentage=20)
+            entries_distribution = Common.cal_entries_distribution(valores,distribution_param=[1,1,1])
+            print("entries_distribution",entries_distribution)
+            self.brokerInstance.handle_order(valores=valores,symbol=symbol,risk=self.RISK,tpList=tpList,nombreStrategy=self.comentario,
+                                             id_order=self.id_order,entry_prices_distribution=entries_distribution)
             self.brokerInstance.test_strategy(symbol=symbol,nombreStrategy=self.comentario)
             return
         
@@ -72,6 +77,7 @@ class US30ProSignal:
                       'isLong':None,
                       'rango_inferior':None,
                       'rango_superior':None,
+                      'Entry':None,
                       }
         
 
