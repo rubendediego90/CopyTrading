@@ -14,9 +14,6 @@ class SnipersGold:
     def handle(self,msg):
         print('*Snipers Gold*',msg)
         symbol = self.getSymbol(msg)
-        if(symbol == None):
-            print('mensaje sin identificar simbolo',msg)
-            return
             
         self.brokerInstance.setSymbolInfo(symbol)
         print('El símbolo es:',symbol)
@@ -26,7 +23,6 @@ class SnipersGold:
         print("order typs",orders_type)
         
         if orders_type["testentrarantes"]:
-            print("prueba anterior comentario")
             self.brokerInstance.test_strategy(symbol=symbol,nombreStrategy=self.comentario)
             return
         
@@ -48,12 +44,10 @@ class SnipersGold:
         
         if orders_type["hasClosePendings"]:
             print("ACTION - Cierra pendientes")
-            self.brokerInstance.close_pending(symbol=symbol,nombre_estrategia=self.comentario)
+            self.brokerInstance.close_pending(symbol=SYMBOL.ORO.value,nombre_estrategia=self.comentario)
             return
 
     def getSymbol(self,msg):
-        print("SYMBOLS_SNIPERS_GOLD.XAU.lower()",SYMBOLS_SNIPERS_GOLD.XAU.lower())
-        print("msg.lower())",msg.lower())
         if SYMBOLS_SNIPERS_GOLD.XAU.lower() in msg.lower() or SYMBOLS_SNIPERS_GOLD.XAUUSD.lower() in msg.lower() or SYMBOLS_SNIPERS_GOLD.GOLD.lower() in msg.lower():
             return SYMBOL.ORO.value
         
@@ -74,7 +68,8 @@ class SnipersGold:
         words_be_2 = ["tp2","hit"]
         words_test_entra_antes_sell = ["scalping sell gold"]
         words_test_entra_antes_buy = ["scalping buy gold"]
-        words_delete_pendings_1 = ["tp1//","pips"]
+        #words_delete_pendings_1 = ["rabooooo"]
+        #words_delete_pendings_1 = ["tp1//","pips"]
         words_delete_pendings_2 = ["tp2//","pips"]
 
         msg_lower = msg.lower()

@@ -8,12 +8,12 @@ from constantes.store_properties import STORE_PROPERTIES
 
 class MetaTrader5Broker():
     
-    def __init__(self,parameterStore:ParameterStore):
+    def __init__(self):
         # Buscar valores
         load_dotenv(find_dotenv())
         self.account_info = None
         self.symbol_info = None
-        self.parameterStore = parameterStore
+        self.parameterStore = ParameterStore()
         
         # Inicializacion de la plataforma
         self._initialize_platform()
@@ -149,10 +149,7 @@ class MetaTrader5Broker():
         # Ajustar el volumen según los pasos permitidos por el broker
         volumen_ajustado =  self.ajuste_volumen_step(volumen,self.getSymbolInfo())
         
-        # Calcular la pérdida estimada en dólares
-        perdida_estimacion = volumen_ajustado * diferencia_precio * tamanio_contrato
-        
-        return volumen_ajustado,perdida_estimacion
+        return volumen_ajustado
     
     def ajuste_volumen_step(self,volumen,symbol_info):
         volume_step = symbol_info.volume_step  
@@ -309,9 +306,7 @@ class MetaTrader5Broker():
         if orders is None or len(orders) == 0:
             print("No hay órdenes pendientes")
             return
-        
         item_order = self.parameterStore.get_first_from_list(STORE_PROPERTIES.ORDERS_OPEN_PENDINGS_LIST.value, lambda item: item.get("symbol") == symbol and item.get("nombreStrategy") == nombre_estrategia)
-
         if(item_order == None): return
         
         # Buscar la orden que deseas eliminar
@@ -340,7 +335,7 @@ class MetaTrader5Broker():
         return self.account_info['balance']
     
     def setComment(self,nombreStrategy,id_order,num):
-        return f"{nombreStrategy}_{id_order}_TP{num+1}"
+        return f"{nombreStrategy}_{id_order}_TP{num}"
     
     def test_strategy(self, symbol, nombreStrategy):
         tick = mt5.symbol_info_tick(symbol)
@@ -360,10 +355,7 @@ class MetaTrader5Broker():
         self.parameterStore.add_to_list(STORE_PROPERTIES.TEST_LIST.value, orden_data)
         
     def save_in_log(self, log):
-        date = Utils.dateprint()
-        log["date"] = date  # Añadir la fecha al diccionario
-        print("Save logger",log)
-        self.parameterStore.add_to_list(STORE_PROPERTIES.LOG_LIST.value, log)
+        pass
     
     def handle_order(self, valores, symbol, risk, tpList, nombreStrategy,id_order):
         print("handle_order", valores)
@@ -378,7 +370,7 @@ class MetaTrader5Broker():
         is_short = valores["isShort"]
         stop_loss = valores["SL"]
 
-        def enviar_ordenes_market(lotes, signal_type,perdida,entry_price):
+        def enviar_ordenes_market(lotes, signal_type,entry_price):
             for i, tp in enumerate(tpList, start=1):
                 comment = self.setComment(nombreStrategy=nombreStrategy,id_order=id_order,num=i)
                 order = OrderEvent(
@@ -396,7 +388,6 @@ class MetaTrader5Broker():
                     "id_order":id_order,
                     "symbol": symbol,
                     "lotes":lotes,
-                    "perdida_estimada": perdida,
                     "comentario": comment,
                     "entry_price": entry_price,
                     "tp_index": i,
@@ -413,9 +404,9 @@ class MetaTrader5Broker():
         
         if not has_range:
             entry_price_calc = current_ask if is_long else current_bid
-            lotes, perdida = self.calc_lotes(sl=stop_loss, entry=entry_price_calc, risk=risk, numTP=num_tps)
+            lotes = self.calc_lotes(sl=stop_loss, entry=entry_price_calc, risk=risk, numTP=num_tps)
             signal_type = SignalType.BUY if is_long else SignalType.SELL
-            enviar_ordenes_market(lotes, signal_type,perdida,entry_price_calc)
+            enviar_ordenes_market(lotes, signal_type,entry_price_calc)
             return
 
         # Tiene rango: asegurar que rango_inferior < rango_superior
@@ -424,18 +415,15 @@ class MetaTrader5Broker():
         
         # Entrar al mercado si el precio está dentro del rango
         signal_type = SignalType.BUY if is_long else SignalType.SELL
-        print("Rango",rango_inferior)
-        print("Rango",rango_superior)
-        print("current_ask",current_ask)
-        print("current_bid",current_bid)
+
         if is_long and rango_inferior <= current_ask <= rango_superior:
-            lotes, perdida = self.calc_lotes(sl=stop_loss, entry=current_ask, risk=risk, numTP=num_tps)
-            enviar_ordenes_market(lotes, signal_type,perdida,current_ask)
+            lotes = self.calc_lotes(sl=stop_loss, entry=current_ask, risk=risk, numTP=num_tps)
+            enviar_ordenes_market(lotes, signal_type,current_ask)
             return
 
         if is_short and rango_inferior <= current_bid <= rango_superior:
-            lotes, perdida = self.calc_lotes(sl=stop_loss, entry=current_bid, risk=risk, numTP=num_tps)
-            enviar_ordenes_market(lotes, signal_type,perdida,current_bid)
+            lotes = self.calc_lotes(sl=stop_loss, entry=current_bid, risk=risk, numTP=num_tps)
+            enviar_ordenes_market(lotes, signal_type,current_bid)
             return
 
         # Si no está en el rango, dejar orden pendiente
@@ -454,7 +442,7 @@ class MetaTrader5Broker():
         )
         
             # === ENVÍO DE ÓRDENES PENDIENTES ===
-    def send_pending_order(self,symbol,order_type, entry_price, sl_price, tp_price, lot,comment,perdida,i,nombreStrategy,id_order):
+    def send_pending_order(self,symbol,order_type, entry_price, sl_price, tp_price, lot,comment,i,nombreStrategy,id_order):
         request = {
             "action": mt5.TRADE_ACTION_PENDING,
             "symbol": symbol,
@@ -477,7 +465,6 @@ class MetaTrader5Broker():
                 "id_order":id_order,
                 "symbol": symbol,
                 "lotes":lot,
-                "perdida_estimada": perdida,
                 "comentario": comment,
                 "entry_price": entry_price,
                 "tp_index": i,
@@ -530,21 +517,21 @@ class MetaTrader5Broker():
         current_bid = tick.bid
 
         for entry in entry_prices:
-            for i, tp in enumerate(take_profits):
+            for i, tp in enumerate(take_profits, start=1):
                 comment = self.setComment(nombreStrategy=nombreStrategy,id_order=id_order,num=i)
-                lot, perdida = self.calc_lotes(entry=entry, sl=STOP_LOSS_PRICE,risk=RISK_PERCENT / (len(entry_prices)),numTP=len(take_profits))
+                lot = self.calc_lotes(entry=entry, sl=STOP_LOSS_PRICE,risk=RISK_PERCENT / (len(entry_prices)),numTP=len(take_profits))
 
                 # === BUY PENDINGS ===
                 if entry > current_ask and isLong:
-                    self.send_pending_order(symbol,mt5.ORDER_TYPE_BUY_STOP, entry, STOP_LOSS_PRICE, tp, lot,comment,perdida,i,nombreStrategy,id_order)
+                    self.send_pending_order(symbol,mt5.ORDER_TYPE_BUY_STOP, entry, STOP_LOSS_PRICE, tp, lot,comment,i,nombreStrategy,id_order)
                 elif entry < current_ask and isLong:
-                    self.send_pending_order(symbol,mt5.ORDER_TYPE_BUY_LIMIT, entry, STOP_LOSS_PRICE, tp, lot,comment,perdida,i,nombreStrategy,id_order)
+                    self.send_pending_order(symbol,mt5.ORDER_TYPE_BUY_LIMIT, entry, STOP_LOSS_PRICE, tp, lot,comment,i,nombreStrategy,id_order)
 
                 # === SELL PENDINGS ===
                 if entry < current_bid and isShort:
-                    self.send_pending_order(symbol,mt5.ORDER_TYPE_SELL_STOP, entry, STOP_LOSS_PRICE, tp, lot,comment,perdida,i,nombreStrategy,id_order)
+                    self.send_pending_order(symbol,mt5.ORDER_TYPE_SELL_STOP, entry, STOP_LOSS_PRICE, tp, lot,comment,i,nombreStrategy,id_order)
                 elif entry > current_bid and isShort:
-                    self.send_pending_order(symbol,mt5.ORDER_TYPE_SELL_LIMIT, entry, STOP_LOSS_PRICE, tp, lot,comment,perdida,i,nombreStrategy,id_order)
+                    self.send_pending_order(symbol,mt5.ORDER_TYPE_SELL_LIMIT, entry, STOP_LOSS_PRICE, tp, lot,comment,i,nombreStrategy,id_order)
        
 
 
