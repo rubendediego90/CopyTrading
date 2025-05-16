@@ -66,7 +66,7 @@ class FTMOUtils:
     def obtener_comentarios(self,items):
         return [item['comentario'] for item in items if 'comentario' in item]
             
-    def auto_sl(self,brokerInstance:MetaTrader5Broker):
+    async def auto_sl(self,brokerInstance:MetaTrader5Broker):
         #traer lista de ordenes abiertas y pendientes
         orders_pendings = brokerInstance.get_orders_pendings()
         positions_opens = brokerInstance.get_positions_open()
