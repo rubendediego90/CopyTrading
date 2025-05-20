@@ -7,6 +7,7 @@ class CONFIG_NAME_STRATEGY(str,Enum):
     SNIPERS_GOLD_PUB = "SPGP"
     VLAD = "VLAD"
     US30_PRO = "U30P"
+    TURBO_PUBLIC = "TURP"
     
 class CONFIG_STRATEGY_PROPERTIES(str,Enum):
     RISK = "riesgo"
