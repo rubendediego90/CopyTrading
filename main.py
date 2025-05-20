@@ -35,7 +35,10 @@ chats_a_escuchar = [
     int(CANALS.SNIPERS_GOLD_VIP),
     int(CANALS.US30_PRO),
     int(CANALS.SNIPERS_GOLD_PUBLIC),
-    int(GROUPS.TEST),
+    int(CANALS.TURBO_PUBLIC),
+    int(GROUPS.PRE),
+    int(GROUPS.PRO),
+    int(GROUPS.DEV),
 ]
 
 param_store = ParameterStore()

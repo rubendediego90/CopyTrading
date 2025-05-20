@@ -32,8 +32,23 @@ class PTJG_GOLD(str,Enum):
     XAU = "XAU"
     XAUUSD = "XAUUSD"
     
+class TURBO(str,Enum):
+    GOLD = "GOLD"
+    XAU = "XAU"
+    XAUUSD = "XAUUSD"
+    BITCOIN = "BITCOIN"
+    BTC = "BTC"
+    BTC_USD = "BTCUSD"
+    
+    
+    
 class US30PRO(str,Enum):
     US30 = "US30"
+    
+class ENTORNOS(str,Enum):
+    DEV = "DEV"
+    PRE = "PRE"
+    PRO = "PRO"
 
     
 
