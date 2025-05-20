@@ -10,7 +10,9 @@ from brokers.MetaTrader5_broker import MetaTrader5Broker
 from store.orders_store import ParameterStore
 from utils.ftmo_utils import FTMOUtils
 from handlers.handler_chat import HandlerChat
+from dotenv import load_dotenv
 
+load_dotenv()
 
 # ✅ Cargamos las variables de entorno
 a = os.getenv("MT5_PATH")
