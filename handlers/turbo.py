@@ -27,10 +27,9 @@ class TurboSignal:
             
             valores = self.extraer_valores(msg)
             tpList = valores['TP']
-                       
+            
             valores = Common.setRange(valores,percentage=20)
             entries_distribution = Common.cal_entries_distribution(valores,distribution_param=[1,1,1])
-            print("entries_distribution",entries_distribution)
             self.brokerInstance.handle_order(valores=valores,symbol=symbol,tpList=tpList,nombreStrategy=self.comentario,
                                              id_order=self.id_order,entry_prices_distribution=entries_distribution)
             self.brokerInstance.test_strategy(symbol=symbol,nombreStrategy=self.comentario)
@@ -76,9 +75,9 @@ class TurboSignal:
     #TODO revisar
     def extraer_valores(self, texto):
         patrones = {
-            "SL": r"\bSL\s+([\d.,]+[KkMmBb]?)",
-            "TP": r"\bTP\s+([\d.,]+[KkMmBb]?)",
-            "Entry": r"\b(?:|BUY|SELL)\s+([\d.,]+[KkMmBb]?)",
+            "SL": r"\bSL[:\s]*([\d.,]+[KkMmBb]?)",
+            "TP": r"\bTP\d*[:\s]*([\d.,]+[KkMmBb]?)",
+            "Entry": r"\b(?:BUY|SELL)\s*@?\s*([\d.,]+[KkMmBb]?)",
         }
 
         resultados = {
@@ -126,6 +125,4 @@ class TurboSignal:
             elif resultados['SL'] < resultados['TP'][0]:
                 resultados['isShort'] = False
                 resultados['isLong'] = True
-
-
         return resultados
