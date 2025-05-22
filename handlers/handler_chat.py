@@ -27,26 +27,32 @@ class HandlerChat:
         if chat_id == int(CANALS.SNIPERS_GOLD_VIP):
             snipersGold = SnipersGold(self.brokerInstance, f"{CONFIG_NAME_STRATEGY.SNIPERS_GOLD_VIP.value}",id_order)
             snipersGold.handle(mensaje)
+            return
 
         if chat_id == int(CANALS.SNIPERS_GOLD_PUBLIC):
             snipersGold = SnipersGold(self.brokerInstance, f"{CONFIG_NAME_STRATEGY.SNIPERS_GOLD_PUB.value}",id_order)
             snipersGold.handle(mensaje)
+            return
             
         if chat_id == int(CANALS.PTJG_GOLD_PUBLIC):
             ptjgGold = PtjgGold(self.brokerInstance, f"{CONFIG_NAME_STRATEGY.PTJG_GOLD_PUB.value}",id_order)
             ptjgGold.handle(mensaje)
+            return
 
         if chat_id == int(CANALS.SIGNAL_VLAD):
             vladSignal = VladSignal(self.brokerInstance,f"{CONFIG_NAME_STRATEGY.VLAD.value}",id_order)
             vladSignal.handle(mensaje)
+            return
             
         if chat_id == int(CANALS.US30_PRO):
             nasPro = US30ProSignal(self.brokerInstance,f"{CONFIG_NAME_STRATEGY.US30_PRO.value}",id_order)
             nasPro.handle(mensaje)
+            return
             
         if chat_id == int(CANALS.TURBO_PUBLIC):
             turbo = TurboSignal(self.brokerInstance,f"{CONFIG_NAME_STRATEGY.TURBO_PUBLIC.value}",id_order)
             turbo.handle(mensaje)
+            return
             
         await self.handleEntornosChat(msg=mensaje,chat_id=chat_id,id_order=id_order)
         
@@ -62,9 +68,8 @@ class HandlerChat:
         if (chat_id == int(GROUPS.DEV)and self.environment == ENTORNOS.DEV.value):
             await self.healthCheck(msg=msg,entorno=ENTORNOS.DEV.value)
             
-            if msg.lower() != "test" : 
-                snipersGold = SnipersGold(self.brokerInstance, f"{CONFIG_NAME_STRATEGY.SNIPERS_GOLD_VIP.value}",id_order)
-                snipersGold.handle(msg)
+            turbo = TurboSignal(self.brokerInstance,f"{CONFIG_NAME_STRATEGY.TURBO_PUBLIC.value}",id_order)
+            turbo.handle(msg)
                 
         if (chat_id == int(GROUPS.PRE)and self.environment == ENTORNOS.PRE.value):
             await self.healthCheck(msg=msg,entorno=ENTORNOS.PRE.value)

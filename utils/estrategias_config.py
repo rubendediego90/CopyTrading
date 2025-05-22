@@ -10,7 +10,7 @@ class EstrategiasConfig:
                 "close_opens_in_new": True,
             },
             "U30P": {
-                "riesgo": 0.007,
+                "riesgo": 0.008,
                 "auto_stop_loss": True,
                 "tp": 1,
                 "close_pendings_in_new": True,
@@ -24,6 +24,13 @@ class EstrategiasConfig:
                 "close_opens_in_new": False,
             },
             "SPGP": {
+                "riesgo": 0.005,
+                "auto_stop_loss": True,
+                "tp": 2,
+                "close_pendings_in_new": True,
+                "close_opens_in_new": True,
+            },
+            "TURP": {
                 "riesgo": 0.005,
                 "auto_stop_loss": True,
                 "tp": 2,
