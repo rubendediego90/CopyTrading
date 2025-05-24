@@ -76,7 +76,6 @@ class SnipersGold:
         hasNewOrder = False
         hasMoveSL = False
         hasClosePendings = False
-        testentrarantes = False
 
            
         if all(palabra in msg_lower for palabra in words_open_lower):
@@ -93,7 +92,6 @@ class SnipersGold:
             "hasNewOrder": hasNewOrder,
             "hasMoveSL": hasMoveSL,
             "hasClosePendings": hasClosePendings,
-            "testentrarantes":testentrarantes
         }
         
     #TODO revisar

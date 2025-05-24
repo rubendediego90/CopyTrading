@@ -43,31 +43,17 @@ class PtjgGold:
     
     def getOrderType(self,msg):
         words_open = ["tp","ahora","sl"]
-        words_test_entra_antes_sell = ["vendo oro ahora"]
-        words_test_entra_antes_buy = ["compro oro ahora"]
 
         msg_lower = msg.lower()
         words_open_lower = [p.lower() for p in words_open]
-        words_test_entra_antes_sell_lower = [p.lower() for p in words_test_entra_antes_sell]
-        words_test_entra_antes_buy_lower = [p.lower() for p in words_test_entra_antes_buy]
         
         hasNewOrder = False
-        testentrarantes = False
         
-        if ((all(palabra in msg_lower for palabra in words_test_entra_antes_sell_lower) or 
-        all(palabra in msg_lower for palabra in words_test_entra_antes_buy_lower))and not 
-            all(palabra in msg_lower for palabra in words_open_lower)):
-            testentrarantes = True
-            
-        
-
         if all(palabra in msg_lower for palabra in words_open_lower):
             hasNewOrder = True
             
         return {
             "hasNewOrder": hasNewOrder,
-            "testentrarantes":testentrarantes
-            
         }
         
     #TODO revisar
