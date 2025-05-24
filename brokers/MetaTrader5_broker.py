@@ -233,6 +233,7 @@ class MetaTrader5Broker():
             "deviation": 0,
             "comment":order_event.comment,
             "type_filling": mt5.ORDER_FILLING_FOK,
+            "magic_number":order_event.magic_number
         }
         # Mandamos el trade request para ser ejecutado
         result = mt5.order_send(market_order_request)
@@ -240,7 +241,6 @@ class MetaTrader5Broker():
         # Verificar el resultado de la ejecución de la orden
         if self._check_execution_status(result):
             print(f"{Utils.dateprint()} - Market Order {order_event.signal} para {order_event.symbol} de {order_event.volume} lotes ejecutada correctamente")
-            self.save_in_log(market_order_request)
         else:
             #Mandaremos un mensaje de error
             print(f"{Utils.dateprint()} - Ha habido un error al ejecutar la Market Order {order_event.signal} para {order_event.symbol}: {result.comment}")
@@ -373,26 +373,6 @@ class MetaTrader5Broker():
     def setComment(self,nombreStrategy,id_order,num):
         return f"{nombreStrategy}_{id_order}_TP{num}"
     
-    def test_strategy(self, symbol, nombreStrategy):
-        tick = mt5.symbol_info_tick(symbol)
-        if(tick == None):
-            print("tick en mt5 class is None",tick)
-            return
-        current_ask = tick.ask
-        current_bid = tick.bid
-        
-        orden_data = {
-            "date":Utils.dateprint(),
-            "symbol": symbol,
-            "current_ask": current_ask,
-            "current_bid": current_bid,
-            "nombreStrategy": nombreStrategy
-        }
-        self.parameterStore.add_to_list(STORE_PROPERTIES.TEST_LIST.value, orden_data)
-        
-    def save_in_log(self, log):
-        pass
-    
     def handle_order(self, valores, symbol, tpList, nombreStrategy,id_order,entry_prices_distribution):
         #Cierra ordenes anteriores con mismo comentario
         close_open_in_new = self.estrategiasConfig.get(nombreStrategy,CONFIG_STRATEGY_PROPERTIES.CLOSE_OPENS_IN_NEW)
@@ -421,6 +401,7 @@ class MetaTrader5Broker():
                     tp=valores.get(f"TP{i}", tp),
                     target_order=OrderType.MARKET,
                     comment=comment,
+                    magic_number=id_order
                 )
                 self.execute_order(order)
                 print(f"✅ ORDER - TP{i}:", order)
@@ -493,7 +474,8 @@ class MetaTrader5Broker():
             "deviation": 10,
             "type_time": mt5.ORDER_TIME_GTC,
             "type_filling": mt5.ORDER_FILLING_RETURN,
-            "comment": comment
+            "comment": comment,
+            "magic_number":id_order,
         }
         result = mt5.order_send(request)
         if result.retcode != mt5.TRADE_RETCODE_DONE:
@@ -510,7 +492,6 @@ class MetaTrader5Broker():
                 "nombreStrategy": nombreStrategy,
                 }
             self.parameterStore.add_to_list(STORE_PROPERTIES.ORDERS_OPEN_PENDINGS_LIST.value, orden_data)
-            self.save_in_log(orden_data)
             
     def get_positions_open(self):
         # Obtener posiciones abiertas

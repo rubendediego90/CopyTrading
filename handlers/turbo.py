@@ -32,7 +32,6 @@ class TurboSignal:
             entries_distribution = Common.cal_entries_distribution(valores,distribution_param=[1,1,1])
             self.brokerInstance.handle_order(valores=valores,symbol=symbol,tpList=tpList,nombreStrategy=self.comentario,
                                              id_order=self.id_order,entry_prices_distribution=entries_distribution)
-            self.brokerInstance.test_strategy(symbol=symbol,nombreStrategy=self.comentario)
             return
         
         if orders_type["hasMoveSL"]:
