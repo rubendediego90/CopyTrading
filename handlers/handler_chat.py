@@ -9,6 +9,7 @@ from constantes.config_comment import CONFIG_NAME_STRATEGY
 from constantes.canals import CANALS
 from constantes.grupos import GROUPS
 from constantes.types import ENTORNOS
+from utils.exports import Export
 import os
 
 
@@ -63,19 +64,37 @@ class HandlerChat:
         if(id_order == 1000) : id_order = 1
         self.param_store.set(STORE_PROPERTIES.ID_ORDER.value, id_order)
         return id_order
+    
+    def handleExportReport(self):
+        report = self.brokerInstance.getReport()
+        exports = Export()
+        exports.export_as_cvs(path='E:\datos',listado=report,nombre_fichero='report_balance.csv')
             
     async def handleEntornosChat(self,msg,chat_id,id_order):
         if (chat_id == int(GROUPS.DEV)and self.environment == ENTORNOS.DEV.value):
             await self.healthCheck(msg=msg,entorno=ENTORNOS.DEV.value)
             
+
+            
+            '''
+            CODIGO DE PRUEBAS
+            '''
+            
             turbo = TurboSignal(self.brokerInstance,f"{CONFIG_NAME_STRATEGY.TURBO_PUBLIC.value}",id_order)
             turbo.handle(msg)
+            
+            '''
+            FIN
+            '''
                 
         if (chat_id == int(GROUPS.PRE)and self.environment == ENTORNOS.PRE.value):
             await self.healthCheck(msg=msg,entorno=ENTORNOS.PRE.value)
         
         if (chat_id == int(GROUPS.PRO)and self.environment == ENTORNOS.PRO.value):
             await self.healthCheck(msg=msg,entorno=ENTORNOS.PRO.value)
+            
+        if(msg.lower() == "report"): self.handleExportReport()
+
 
     async def healthCheck(self,msg,entorno):
         if msg.lower() != "hi" : return
