@@ -68,7 +68,7 @@ class HandlerChat:
     def handleExportReport(self):
         report = self.brokerInstance.getReport()
         exports = Export()
-        exports.export_as_cvs(path='E:\datos',listado=report,nombre_fichero='report_balance.csv')
+        exports.export_as_cvs(path=os.getenv("PATH_COMPARTIDA"),listado=report,nombre_fichero='report_balance.csv')
             
     async def handleEntornosChat(self,msg,chat_id,id_order):
         if (chat_id == int(GROUPS.DEV)and self.environment == ENTORNOS.DEV.value):
