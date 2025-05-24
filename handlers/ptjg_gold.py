@@ -29,12 +29,6 @@ class PtjgGold:
             tpList = valores['TP']
             self.brokerInstance.handle_order(valores=valores,symbol=symbol,tpList=tpList,nombreStrategy=self.comentario, id_order=self.id_order)
             return
-               
-        if orders_type["testentrarantes"]:
-            print("Entra en previa comentarrio anterior")
-            self.brokerInstance.test_strategy(symbol=symbol,nombreStrategy=self.comentario)
-            return
-        
 
     def getSymbol(self, msg):
         msg = msg.lower()

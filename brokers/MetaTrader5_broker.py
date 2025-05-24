@@ -373,23 +373,6 @@ class MetaTrader5Broker():
     def setComment(self,nombreStrategy,id_order,num):
         return f"{nombreStrategy}_{id_order}_TP{num}"
     
-    def test_strategy(self, symbol, nombreStrategy):
-        tick = mt5.symbol_info_tick(symbol)
-        if(tick == None):
-            print("tick en mt5 class is None",tick)
-            return
-        current_ask = tick.ask
-        current_bid = tick.bid
-        
-        orden_data = {
-            "date":Utils.dateprint(),
-            "symbol": symbol,
-            "current_ask": current_ask,
-            "current_bid": current_bid,
-            "nombreStrategy": nombreStrategy
-        }
-        self.parameterStore.add_to_list(STORE_PROPERTIES.TEST_LIST.value, orden_data)
-        
     def handle_order(self, valores, symbol, tpList, nombreStrategy,id_order,entry_prices_distribution):
         #Cierra ordenes anteriores con mismo comentario
         close_open_in_new = self.estrategiasConfig.get(nombreStrategy,CONFIG_STRATEGY_PROPERTIES.CLOSE_OPENS_IN_NEW)
