@@ -7,6 +7,7 @@ from store.orders_store import ParameterStore
 from constantes.store_properties import STORE_PROPERTIES
 from utils.estrategias_config import EstrategiasConfig
 from constantes.config_comment import CONFIG_STRATEGY_PROPERTIES
+from datetime import datetime
 class MetaTrader5Broker():
     
     def __init__(self):
@@ -63,6 +64,44 @@ class MetaTrader5Broker():
         self.symbol_info = mt5.symbol_info(symbol)
         
     def getSymbolInfo(self): return self.symbol_info
+    
+    def getReport(self):
+        # Definir rango de fechas para buscar historial de órdenes
+        fecha_inicio = datetime(2024, 1, 1)
+        fecha_fin = datetime.now()
+
+        # Obtener historial de órdenes
+        deals = mt5.history_deals_get(fecha_inicio, fecha_fin)
+
+        # Verificar si se recuperaron órdenes
+        if deals is None:
+            print("No se recuperaron órdenes:", mt5.last_error())
+        elif len(deals) == 0:
+            print("No hay órdenes en el periodo seleccionado")
+        else:
+            print(f"Se recuperaron {len(deals)} órdenes:")
+            listado = []
+            for deal in deals:
+                dt = datetime.fromtimestamp(deal.time)
+                fecha = dt.strftime('%Y-%m-%d')
+                hora = dt.strftime('%H:%M:%S')
+                print(f"Ticket: {deal.ticket}, Símbolo: {deal.symbol},Comentario: {deal.comment} Tipo: {deal.type}, "
+                    f"Volumen: {deal.volume}, Precio: {deal.price}, Beneficio: {deal.profit:.2f}, Fecha: {fecha}")
+                deal_dict = {
+                    "ticket": deal.ticket,
+                    "comment": deal.comment,
+                    "symbol": deal.symbol,
+                    "type": deal.type,
+                    "volume": deal.volume,
+                    "price": deal.price,
+                    "profit": deal.profit,
+                    "fecha": fecha,
+                    "hora": hora
+                }
+                if deal_dict["comment"] != "Initial account balance":
+                    listado.append(deal_dict)
+            return listado
+
         
     #TODO mensaje telegram añadir en cada operacion si es real o no
     def _is_real_account(self) -> None:
