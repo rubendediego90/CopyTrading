@@ -20,11 +20,7 @@ class SnipersGold:
         orders_type = self.getOrderType(msg)
         
         print("order typs",orders_type)
-        
-        if orders_type["testentrarantes"]:
-            self.brokerInstance.test_strategy(symbol=symbol,nombreStrategy=self.comentario)
-            return
-        
+               
         if orders_type["hasNewOrder"]:
             print("ACTION - Nueva orden")
             
@@ -67,8 +63,6 @@ class SnipersGold:
     def getOrderType(self,msg):
         words_open = ["tp","entry","sl"]
         words_move_sl = ["sl","move", "to"]
-        words_test_entra_antes_sell = ["scalping sell gold"]
-        words_test_entra_antes_buy = ["scalping buy gold"]
         words_delete_pendings_1 = ["rabooooo"]
         #words_delete_pendings_1 = ["tp1//","pips"]
         words_delete_pendings_2 = ["tp2//","pips"]
@@ -78,19 +72,13 @@ class SnipersGold:
         words_close_pendings_1_lower = [p.lower() for p in words_delete_pendings_1]
         words_close_pendings_2_lower = [p.lower() for p in words_delete_pendings_2]
         words_move_sl_lower = [p.lower() for p in words_move_sl]
-        words_test_entra_antes_sell_lower = [p.lower() for p in words_test_entra_antes_sell]
-        words_test_entra_antes_buy_lower = [p.lower() for p in words_test_entra_antes_buy]
         
         hasNewOrder = False
         hasMoveSL = False
         hasClosePendings = False
         testentrarantes = False
 
-        if ((all(palabra in msg_lower for palabra in words_test_entra_antes_sell_lower) or 
-        all(palabra in msg_lower for palabra in words_test_entra_antes_buy_lower))and not 
-            all(palabra in msg_lower for palabra in words_open_lower)):
-            testentrarantes = True
-            
+           
         if all(palabra in msg_lower for palabra in words_open_lower):
             hasNewOrder = True
             
