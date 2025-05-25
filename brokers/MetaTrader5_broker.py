@@ -95,7 +95,7 @@ class MetaTrader5Broker():
                     "volume": deal.volume,
                     "price": deal.price,
                     "profit": deal.profit,
-                    "magic_number": deal.magic_number,
+                    "magic": deal.magic,
                     "fecha": fecha,
                     "hora": hora
                 }
@@ -234,7 +234,7 @@ class MetaTrader5Broker():
             "deviation": 0,
             "comment":order_event.comment,
             "type_filling": mt5.ORDER_FILLING_FOK,
-            "magic_number":order_event.magic_number
+            "magic":order_event.magic
         }
         # Mandamos el trade request para ser ejecutado
         result = mt5.order_send(market_order_request)
@@ -402,7 +402,7 @@ class MetaTrader5Broker():
                     tp=valores.get(f"TP{i}", tp),
                     target_order=OrderType.MARKET,
                     comment=comment,
-                    magic_number=id_order
+                    magic=id_order
                 )
                 self.execute_order(order)
                 print(f"✅ ORDER - TP{i}:", order)
@@ -476,7 +476,7 @@ class MetaTrader5Broker():
             "type_time": mt5.ORDER_TIME_GTC,
             "type_filling": mt5.ORDER_FILLING_RETURN,
             "comment": comment,
-            "magic_number":id_order,
+            "magic":id_order,
         }
         result = mt5.order_send(request)
         if result.retcode != mt5.TRADE_RETCODE_DONE:
