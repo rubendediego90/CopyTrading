@@ -95,6 +95,7 @@ class MetaTrader5Broker():
                     "volume": deal.volume,
                     "price": deal.price,
                     "profit": deal.profit,
+                    "magic_number": deal.magic_number,
                     "fecha": fecha,
                     "hora": hora
                 }
