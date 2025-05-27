@@ -60,10 +60,10 @@ class HandlerChat:
             await self.sendToOtherEnvironment(chat_id,mensaje)
             return
         
-        await self.handleReHandler(mensaje=mensaje)
+        await self.handleReHandler(mensaje=mensaje,chat_id=chat_id)
         await self.handleEntornosChat(msg=mensaje,chat_id=chat_id,id_order=id_order)
         
-    async def handleReHandler(self,mensaje):
+    async def handleReHandler(self,mensaje,chat_id):
         print("antes ver si es rpo reenviando",int(GROUPS.PRO.value))
         if chat_id == int(GROUPS.PRO):
             patron = r'chat_(\d+)_msg_(\d+)'
