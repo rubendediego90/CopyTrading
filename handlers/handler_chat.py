@@ -11,7 +11,7 @@ from constantes.types import ENTORNOS
 from utils.exports import Export
 from utils.telegram_utils import TelegramUtils
 import os
-
+import re
 
 class HandlerChat:
     def __init__(self,param_store,brokerInstance):
@@ -24,38 +24,63 @@ class HandlerChat:
     async def handle(self,chat_id,mensaje):
         id_order = self.setIdOrder()
         
-
         if chat_id == int(CANALS.SNIPERS_GOLD_VIP):
             snipersGold = SnipersGold(self.brokerInstance, f"{CONFIG_NAME_STRATEGY.SNIPERS_GOLD_VIP.value}",id_order)
             snipersGold.handle(mensaje)
+            await self.sendToOtherEnvironment(chat_id,mensaje)
             return
 
         if chat_id == int(CANALS.SNIPERS_GOLD_PUBLIC):
             snipersGold = SnipersGold(self.brokerInstance, f"{CONFIG_NAME_STRATEGY.SNIPERS_GOLD_PUB.value}",id_order)
             snipersGold.handle(mensaje)
+            await self.sendToOtherEnvironment(chat_id,mensaje)
             return
             
         if chat_id == int(CANALS.PTJG_GOLD_PUBLIC):
             ptjgGold = PtjgGold(self.brokerInstance, f"{CONFIG_NAME_STRATEGY.PTJG_GOLD_PUB.value}",id_order)
             ptjgGold.handle(mensaje)
+            await self.sendToOtherEnvironment(chat_id,mensaje)
             return
 
         if chat_id == int(CANALS.SIGNAL_VLAD):
             vladSignal = VladSignal(self.brokerInstance,f"{CONFIG_NAME_STRATEGY.VLAD.value}",id_order)
             vladSignal.handle(mensaje)
+            await self.sendToOtherEnvironment(chat_id,mensaje)
             return
             
         if chat_id == int(CANALS.US30_PRO):
             nasPro = US30ProSignal(self.brokerInstance,f"{CONFIG_NAME_STRATEGY.US30_PRO.value}",id_order)
             nasPro.handle(mensaje)
+            await self.sendToOtherEnvironment(chat_id,mensaje)
             return
             
         if chat_id == int(CANALS.TURBO_PUBLIC):
             turbo = TurboSignal(self.brokerInstance,f"{CONFIG_NAME_STRATEGY.TURBO_PUBLIC.value}",id_order)
             turbo.handle(mensaje)
+            await self.sendToOtherEnvironment(chat_id,mensaje)
             return
-            
+        
+        await self.handleReHandler(mensaje=mensaje)
         await self.handleEntornosChat(msg=mensaje,chat_id=chat_id,id_order=id_order)
+        
+    async def handleReHandler(self,mensaje):
+        print("antes ver si es rpo reenviando",int(GROUPS.PRO.value))
+        if chat_id == int(GROUPS.PRO):
+            patron = r'chat_(\d+)_msg_(\d+)'
+            match = re.search(patron, mensaje)
+
+            if match:
+                chat_id = match.group(1)
+                msg = match.group(2)
+                await self.handle(self,chat_id,msg)
+        
+        
+    async def sendToOtherEnvironment(self,chat_id,msg):
+        text = f'chat_{chat_id}_msg_{msg}'
+        #Envia a PRE
+        await TelegramUtils.send_msg(msgToSend=text,chat_id=GROUPS.PRE.value)
+        #Envia a develop
+        await TelegramUtils.send_msg(msgToSend=text,chat_id=GROUPS.DEV.value)
         
             
     def setIdOrder(self):
@@ -73,8 +98,6 @@ class HandlerChat:
     async def handleEntornosChat(self,msg,chat_id,id_order):
         if (chat_id == int(GROUPS.DEV)and self.environment == ENTORNOS.DEV.value):
             await self.healthCheck(msg=msg,entorno=ENTORNOS.DEV.value)
-            
-
             
             '''
             CODIGO DE PRUEBAS
