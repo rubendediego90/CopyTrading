@@ -1,5 +1,4 @@
 from constantes.store_properties import STORE_PROPERTIES
-from services.notifications.notifications import NotificationService, TelegramNotificationProperties
 from handlers.vlad_signals import VladSignal
 from handlers.sinpers_gold import SnipersGold
 from handlers.us30_pro import US30ProSignal
@@ -10,6 +9,7 @@ from constantes.canals import CANALS
 from constantes.grupos import GROUPS
 from constantes.types import ENTORNOS
 from utils.exports import Export
+from utils.telegram_utils import TelegramUtils
 import os
 
 
@@ -80,8 +80,8 @@ class HandlerChat:
             CODIGO DE PRUEBAS
             '''
             
-            turbo = TurboSignal(self.brokerInstance,f"{CONFIG_NAME_STRATEGY.TURBO_PUBLIC.value}",id_order)
-            turbo.handle(msg)
+            snipersGold = SnipersGold(self.brokerInstance, f"{CONFIG_NAME_STRATEGY.SNIPERS_GOLD_VIP.value}",id_order)
+            snipersGold.handle(msg)
             
             '''
             FIN
@@ -98,24 +98,18 @@ class HandlerChat:
 
     async def healthCheck(self,msg,entorno):
         if msg.lower() != "hi" : return
-        icon = None
+        
         chat_id=None
         if ENTORNOS.PRO == entorno:
-            icon = "🟥"
-            chat_id = GROUPS.PRO
+            chat_id = GROUPS.PRO.value
             
         elif ENTORNOS.PRE == entorno:
-            icon = "🟨"
-            chat_id = GROUPS.PRE
+            chat_id = GROUPS.PRE.value
             
         elif ENTORNOS.DEV == entorno:
-            icon = "🟩"
-            chat_id = GROUPS.DEV
+            chat_id = GROUPS.DEV.value
             
-        notificationService = NotificationService(properties=TelegramNotificationProperties(
-            token=self.token_bot,
-            chat_id=chat_id,
-        ))
+        msg=  "Robin a su servicio"  
+        await TelegramUtils.send_msg(msgToSend=msg,chat_id=chat_id)
             
-        await notificationService.send_notification(f"{icon}{icon} ** {entorno} ** {icon}{icon}", "Robin a su servicio")        
             

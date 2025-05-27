@@ -63,8 +63,8 @@ class SnipersGold:
     def getOrderType(self,msg):
         words_open = ["tp","entry","sl"]
         words_move_sl = ["sl","move", "to"]
-        words_delete_pendings_1 = ["rabooooo"]
-        #words_delete_pendings_1 = ["tp1//","pips"]
+        #words_delete_pendings_1 = ["rabooooo"]
+        words_delete_pendings_1 = ["tp1//","pips"]
         words_delete_pendings_2 = ["tp2//","pips"]
 
         msg_lower = msg.lower()
@@ -140,7 +140,8 @@ class SnipersGold:
         for clave in resultados:
             if isinstance(resultados[clave], list) and len(resultados[clave]) > 0 and clave != "TP":
                 # Si es una lista no vacía, asignamos el primer valor
-                resultados[clave] = resultados[clave][0]
+                nuevo_valor = (resultados[clave][0]) - 1
+                resultados[clave] = nuevo_valor  
             elif isinstance(resultados[clave], list) and len(resultados[clave]) == 0:
                 # Si la lista está vacía, asignamos None
                 resultados[clave] = None
@@ -153,6 +154,6 @@ class SnipersGold:
             elif resultados['SL'] < resultados['TP'][0]:
                 resultados['isShort'] = False
                 resultados['isLong'] = True
-
+        resultados['TP'] = [x - 1 for x in resultados['TP']]
 
         return resultados
