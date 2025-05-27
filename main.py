@@ -44,7 +44,6 @@ chats_a_escuchar = [
 param_store = ParameterStore()
 brokerInstance = MetaTrader5Broker()
 handlerChat = HandlerChat(param_store,brokerInstance)
-can_open_global = True
 
 # ✅ Manejo de mensajes
 @client.on(events.NewMessage(chats=chats_a_escuchar))
@@ -53,10 +52,6 @@ async def manejador_mensajes(event):
     chat_id = event.chat_id
     mensaje = event.raw_text
     await canalsYGroups.msgLog(event)
-
-    #validar que se pueden abrir nuevas ordenes
-    if(can_open_global == False): return
-    
     await handlerChat.handle(chat_id,mensaje)
 
 
