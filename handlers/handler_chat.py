@@ -80,8 +80,8 @@ class HandlerChat:
             CODIGO DE PRUEBAS
             '''
             
-            turbo = TurboSignal(self.brokerInstance,f"{CONFIG_NAME_STRATEGY.TURBO_PUBLIC.value}",id_order)
-            turbo.handle(msg)
+            snipersGold = SnipersGold(self.brokerInstance, f"{CONFIG_NAME_STRATEGY.SNIPERS_GOLD_VIP.value}",id_order)
+            snipersGold.handle(msg)
             
             '''
             FIN
