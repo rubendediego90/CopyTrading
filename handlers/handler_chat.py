@@ -64,15 +64,12 @@ class HandlerChat:
         await self.handleEntornosChat(msg=mensaje,chat_id=chat_id,id_order=id_order)
         
     async def handleReHandler(self,mensaje,chat_id):
-        print("antes ver si es rpo reenviando",int(GROUPS.PRO.value))
-        if chat_id == int(GROUPS.PRO):
-            patron = r'chat_(\d+)_msg_(\d+)'
-            match = re.search(patron, mensaje)
-
+        if chat_id == int(GROUPS.DEV) or chat_id == int(GROUPS.PRE):
+            match = re.search(r"chat_(.*?)_msg_(.*)", mensaje)
             if match:
                 chat_id = match.group(1)
                 msg = match.group(2)
-                await self.handle(self,chat_id,msg)
+                await self.handle(chat_id,msg)
         
         
     async def sendToOtherEnvironment(self,chat_id,msg):
