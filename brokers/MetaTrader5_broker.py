@@ -8,6 +8,7 @@ from constantes.store_properties import STORE_PROPERTIES
 from utils.estrategias_config import EstrategiasConfig
 from constantes.config_comment import CONFIG_STRATEGY_PROPERTIES
 from datetime import datetime
+from utils.exports import Export
 class MetaTrader5Broker():
     
     def __init__(self):
@@ -15,8 +16,7 @@ class MetaTrader5Broker():
         load_dotenv(find_dotenv())
         self.account_info = None
         self.symbol_info = None
-        self.parameterStore = ParameterStore()
-        
+        self.parameterStore = ParameterStore()      
         # Inicializacion de la plataforma
         self._initialize_platform()
         
@@ -462,6 +462,31 @@ class MetaTrader5Broker():
             id_order=id_order
         )
         
+    def generateReportError(request,result,lastError):
+        type_order = None  # Inicializamos la variable de tipo de orden
+
+        if request["type"] == mt5.ORDER_TYPE_BUY:  # Si es una orden de compra (long)
+            type_order = "long"
+        elif request["type"] == mt5.ORDER_TYPE_SELL:  # Si es una orden de venta (short)
+            type_order = "short"
+        else:
+            type_order = "desconocido"
+        lines = [
+            f"Error: {result.comment}",
+            f"Last error:{lastError}",
+            f"Result:{result}",
+            f"Simbolo: {request.symbol}",
+            f"Comentario: {request.comment}",
+            f"Stop loss: {request.sl}",
+            f"TP: {request.tp}",
+            f"Lote: {request.volume}",
+            f"Entrada: {request.price}",
+            f"Tipo: {type_order}",
+        ]
+        
+        exports = Export()
+        exports.export_as_txt("errores", lines, f"log_errores {Utils.dateprint()}")
+        
             # === ENVÍO DE ÓRDENES PENDIENTES ===
     def send_pending_order(self,symbol,order_type, entry_price, sl_price, tp_price, lot,comment,i,nombreStrategy,id_order):
         request = {
@@ -481,6 +506,7 @@ class MetaTrader5Broker():
         result = mt5.order_send(request)
         if result.retcode != mt5.TRADE_RETCODE_DONE:
             print(f"❌ Error: {result.comment} enviada: {entry_price}, lote: {lot}, SL: {sl_price}, TP: {tp_price}")
+            self.generateReportError(request,result,mt5.last_error())
         else:
             print(f"✅ {order_type} enviada: {entry_price}, lote: {lot}, SL: {sl_price}, TP: {tp_price}")
             orden_data = {
