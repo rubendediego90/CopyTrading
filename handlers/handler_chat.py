@@ -24,52 +24,73 @@ class HandlerChat:
     async def handle(self,chat_id,mensaje):
         id_order = self.setIdOrder()
         
-        if chat_id == int(CANALS.SNIPERS_GOLD_VIP):
+        chat_id_int = int(chat_id)
+        
+        if chat_id_int == int(CANALS.SNIPERS_GOLD_VIP.value):
+            print("entra a vip",chat_id_int)
             snipersGold = SnipersGold(self.brokerInstance, f"{CONFIG_NAME_STRATEGY.SNIPERS_GOLD_VIP.value}",id_order)
             snipersGold.handle(mensaje)
-            await self.sendToOtherEnvironment(chat_id,mensaje)
+            print("antes isPro")
+            if self.environment == ENTORNOS.PRO : await self.sendToOtherEnvironment(chat_id_int,mensaje)
+            print("despues isPro")
+            
             return
 
-        if chat_id == int(CANALS.SNIPERS_GOLD_PUBLIC):
+        if chat_id_int == int(CANALS.SNIPERS_GOLD_PUBLIC.value):
+            print("entra a public",chat_id_int)
+            
             snipersGold = SnipersGold(self.brokerInstance, f"{CONFIG_NAME_STRATEGY.SNIPERS_GOLD_PUB.value}",id_order)
             snipersGold.handle(mensaje)
-            await self.sendToOtherEnvironment(chat_id,mensaje)
+            print("antes isPro")
+            
+            if self.environment == ENTORNOS.PRO : await self.sendToOtherEnvironment(chat_id_int,mensaje)
+            print("despues isPro")
+            
             return
             
-        if chat_id == int(CANALS.PTJG_GOLD_PUBLIC):
+        if chat_id_int == int(CANALS.PTJG_GOLD_PUBLIC.value):
             ptjgGold = PtjgGold(self.brokerInstance, f"{CONFIG_NAME_STRATEGY.PTJG_GOLD_PUB.value}",id_order)
             ptjgGold.handle(mensaje)
-            await self.sendToOtherEnvironment(chat_id,mensaje)
+            if self.environment == ENTORNOS.PRO : await self.sendToOtherEnvironment(chat_id_int,mensaje)
             return
 
-        if chat_id == int(CANALS.SIGNAL_VLAD):
+        if chat_id_int == int(CANALS.SIGNAL_VLAD.value):
             vladSignal = VladSignal(self.brokerInstance,f"{CONFIG_NAME_STRATEGY.VLAD.value}",id_order)
             vladSignal.handle(mensaje)
-            await self.sendToOtherEnvironment(chat_id,mensaje)
+            if self.environment == ENTORNOS.PRO : await self.sendToOtherEnvironment(chat_id_int,mensaje)
             return
             
-        if chat_id == int(CANALS.US30_PRO):
+        if chat_id_int == int(CANALS.US30_PRO.value):
             nasPro = US30ProSignal(self.brokerInstance,f"{CONFIG_NAME_STRATEGY.US30_PRO.value}",id_order)
             nasPro.handle(mensaje)
-            await self.sendToOtherEnvironment(chat_id,mensaje)
+            if self.environment == ENTORNOS.PRO: await self.sendToOtherEnvironment(chat_id_int,mensaje)
             return
             
-        if chat_id == int(CANALS.TURBO_PUBLIC):
+        if chat_id_int == int(CANALS.TURBO_PUBLIC.value):
+            print("entra a turbo",chat_id_int)
             turbo = TurboSignal(self.brokerInstance,f"{CONFIG_NAME_STRATEGY.TURBO_PUBLIC.value}",id_order)
             turbo.handle(mensaje)
-            await self.sendToOtherEnvironment(chat_id,mensaje)
+            print("antes isPro")
+            
+            if self.environment == ENTORNOS.PRO : await self.sendToOtherEnvironment(chat_id_int,mensaje)
+            print("despues isPro")
+            
             return
         
-        await self.handleReHandler(mensaje=mensaje,chat_id=chat_id)
-        await self.handleEntornosChat(msg=mensaje,chat_id=chat_id,id_order=id_order)
+        await self.handleReHandler(mensaje=mensaje,chat_id=chat_id_int)
+        await self.handleEntornosChat(msg=mensaje,chat_id=chat_id_int,id_order=id_order)
         
     async def handleReHandler(self,mensaje,chat_id):
-        if chat_id == int(GROUPS.DEV) or chat_id == int(GROUPS.PRE):
+        print("dentro rehandler y antes if")
+        if chat_id == int(GROUPS.DEV.value) or chat_id == int(GROUPS.PRE.value):
             match = re.search(r"chat_(.*?)_msg_(.*)", mensaje)
+            print("match??",match)
             if match:
-                chat_id = match.group(1)
+                chat_id_extraido = match.group(1)
+                print("hay match y chat extraido",chat_id_extraido)
+                print("chat que llega",chat_id)
                 msg = match.group(2)
-                await self.handle(chat_id,msg)
+                await self.handle(chat_id_extraido,msg)
         
         
     async def sendToOtherEnvironment(self,chat_id,msg):
