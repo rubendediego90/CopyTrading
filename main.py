@@ -28,22 +28,11 @@ canalsYGroups = CanalsYGroups(client)
 canalsYGroups.getCanals()
 client.loop.run_until_complete(canalsYGroups.getGroups())
 
-chats_a_escuchar = [
-    int(CANALS.BIT_LOBO),
-    int(CANALS.SIGNAL_VLAD),
-    int(CANALS.CRIPTO_SENIALES),
-    int(CANALS.SNIPERS_GOLD_VIP),
-    int(CANALS.US30_PRO),
-    int(CANALS.SNIPERS_GOLD_PUBLIC),
-    int(CANALS.TURBO_PUBLIC),
-    int(GROUPS.PRE),
-    int(GROUPS.PRO),
-    int(GROUPS.DEV),
-]
-
 param_store = ParameterStore()
 brokerInstance = MetaTrader5Broker()
 handlerChat = HandlerChat(param_store,brokerInstance)
+
+chats_a_escuchar = handlerChat.setChatsToWatch()
 
 # ✅ Manejo de mensajes
 @client.on(events.NewMessage(chats=chats_a_escuchar))

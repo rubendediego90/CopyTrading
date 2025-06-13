@@ -27,24 +27,17 @@ class HandlerChat:
         chat_id_int = int(chat_id)
         
         if chat_id_int == int(CANALS.SNIPERS_GOLD_VIP.value):
-            print("entra a vip",chat_id_int)
             snipersGold = SnipersGold(self.brokerInstance, f"{CONFIG_NAME_STRATEGY.SNIPERS_GOLD_VIP.value}",id_order)
             snipersGold.handle(mensaje)
-            print("antes isPro")
             if self.environment == ENTORNOS.PRO : await self.sendToOtherEnvironment(chat_id_int,mensaje)
-            print("despues isPro")
             
             return
 
         if chat_id_int == int(CANALS.SNIPERS_GOLD_PUBLIC.value):
-            print("entra a public",chat_id_int)
-            
             snipersGold = SnipersGold(self.brokerInstance, f"{CONFIG_NAME_STRATEGY.SNIPERS_GOLD_PUB.value}",id_order)
             snipersGold.handle(mensaje)
-            print("antes isPro")
             
             if self.environment == ENTORNOS.PRO : await self.sendToOtherEnvironment(chat_id_int,mensaje)
-            print("despues isPro")
             
             return
             
@@ -67,13 +60,9 @@ class HandlerChat:
             return
             
         if chat_id_int == int(CANALS.TURBO_PUBLIC.value):
-            print("entra a turbo",chat_id_int)
             turbo = TurboSignal(self.brokerInstance,f"{CONFIG_NAME_STRATEGY.TURBO_PUBLIC.value}",id_order)
             turbo.handle(mensaje)
-            print("antes isPro")
-            
             if self.environment == ENTORNOS.PRO : await self.sendToOtherEnvironment(chat_id_int,mensaje)
-            print("despues isPro")
             
             return
         
@@ -81,14 +70,10 @@ class HandlerChat:
         await self.handleEntornosChat(msg=mensaje,chat_id=chat_id_int,id_order=id_order)
         
     async def handleReHandler(self,mensaje,chat_id):
-        print("dentro rehandler y antes if")
         if chat_id == int(GROUPS.DEV.value) or chat_id == int(GROUPS.PRE.value):
-            match = re.search(r"chat_(.*?)_msg_(.*)", mensaje)
-            print("match??",match)
+            match = re.search(r"chat_(.*?)_msg_(.*)", mensaje, re.DOTALL)
             if match:
                 chat_id_extraido = match.group(1)
-                print("hay match y chat extraido",chat_id_extraido)
-                print("chat que llega",chat_id)
                 msg = match.group(2)
                 await self.handle(chat_id_extraido,msg)
         
@@ -114,7 +99,7 @@ class HandlerChat:
         exports.export_as_cvs(path=os.getenv("PATH_COMPARTIDA"),listado=report,nombre_fichero='report_balance.csv')
             
     async def handleEntornosChat(self,msg,chat_id,id_order):
-        if (chat_id == int(GROUPS.DEV)and self.environment == ENTORNOS.DEV.value):
+        if (chat_id == int(GROUPS.DEV.value)and self.environment == ENTORNOS.DEV.value and ("test" in msg.lower())):
             await self.healthCheck(msg=msg,entorno=ENTORNOS.DEV.value)
             
             '''
@@ -152,5 +137,37 @@ class HandlerChat:
             
         msg=  "Robin a su servicio"  
         await TelegramUtils.send_msg(msgToSend=msg,chat_id=chat_id)
-            
-            
+        
+    def setChatsToWatch(self):
+        entorno = os.getenv("ENVIRONMENT")
+        
+        
+        chats_DEV = [  
+            int(GROUPS.PRO),
+            int(GROUPS.DEV)
+            ]
+
+        chats_PRE = [  
+            int(GROUPS.PRE),
+            int(GROUPS.DEV)
+            ]
+
+        chats_PRO = [  
+            int(CANALS.BIT_LOBO),
+            int(CANALS.SIGNAL_VLAD),
+            int(CANALS.CRIPTO_SENIALES),
+            int(CANALS.SNIPERS_GOLD_VIP),
+            int(CANALS.SNIPERS_GOLD_PUBLIC),
+            int(CANALS.TURBO_PUBLIC),
+            int(CANALS.US30_PRO),
+            ]
+
+        if entorno == ENTORNOS.DEV:
+            return chats_DEV
+        elif entorno == ENTORNOS.PRE:
+            return chats_PRE
+        elif entorno == ENTORNOS.PRO:
+            return chats_PRO
+        else:
+            print(f"⚠️ Entorno no reconocido: {entorno}")
+            return []
