@@ -19,21 +19,21 @@ class HandlerChat:
         self.brokerInstance = brokerInstance
         self.token_bot = os.getenv("BOT_TOKEN")
         self.environment = os.getenv("ENVIRONMENT")
-        
+        self.isOnEntorno = True
     
     async def handle(self,chat_id,mensaje):
         id_order = self.setIdOrder()
         
         chat_id_int = int(chat_id)
         
-        if chat_id_int == int(CANALS.SNIPERS_GOLD_VIP.value):
+        if chat_id_int == int(CANALS.SNIPERS_GOLD_VIP.value) and self.isOnEntorno:
             snipersGold = SnipersGold(self.brokerInstance, f"{CONFIG_NAME_STRATEGY.SNIPERS_GOLD_VIP.value}",id_order)
             snipersGold.handle(mensaje)
             if self.environment == ENTORNOS.PRO : await self.sendToOtherEnvironment(chat_id_int,mensaje)
             
             return
 
-        if chat_id_int == int(CANALS.SNIPERS_GOLD_PUBLIC.value):
+        if chat_id_int == int(CANALS.SNIPERS_GOLD_PUBLIC.value) and self.isOnEntorno:
             snipersGold = SnipersGold(self.brokerInstance, f"{CONFIG_NAME_STRATEGY.SNIPERS_GOLD_PUB.value}",id_order)
             snipersGold.handle(mensaje)
             
@@ -41,25 +41,25 @@ class HandlerChat:
             
             return
             
-        if chat_id_int == int(CANALS.PTJG_GOLD_PUBLIC.value):
+        if chat_id_int == int(CANALS.PTJG_GOLD_PUBLIC.value) and self.isOnEntorno:
             ptjgGold = PtjgGold(self.brokerInstance, f"{CONFIG_NAME_STRATEGY.PTJG_GOLD_PUB.value}",id_order)
             ptjgGold.handle(mensaje)
             if self.environment == ENTORNOS.PRO : await self.sendToOtherEnvironment(chat_id_int,mensaje)
             return
 
-        if chat_id_int == int(CANALS.SIGNAL_VLAD.value):
+        if chat_id_int == int(CANALS.SIGNAL_VLAD.value ) and self.isOnEntorno:
             vladSignal = VladSignal(self.brokerInstance,f"{CONFIG_NAME_STRATEGY.VLAD.value}",id_order)
             vladSignal.handle(mensaje)
             if self.environment == ENTORNOS.PRO : await self.sendToOtherEnvironment(chat_id_int,mensaje)
             return
             
-        if chat_id_int == int(CANALS.US30_PRO.value):
+        if chat_id_int == int(CANALS.US30_PRO.value) and self.isOnEntorno:
             nasPro = US30ProSignal(self.brokerInstance,f"{CONFIG_NAME_STRATEGY.US30_PRO.value}",id_order)
             nasPro.handle(mensaje)
             if self.environment == ENTORNOS.PRO: await self.sendToOtherEnvironment(chat_id_int,mensaje)
             return
             
-        if chat_id_int == int(CANALS.TURBO_PUBLIC.value):
+        if chat_id_int == int(CANALS.TURBO_PUBLIC.value) and self.isOnEntorno:
             turbo = TurboSignal(self.brokerInstance,f"{CONFIG_NAME_STRATEGY.TURBO_PUBLIC.value}",id_order)
             turbo.handle(mensaje)
             if self.environment == ENTORNOS.PRO : await self.sendToOtherEnvironment(chat_id_int,mensaje)
@@ -97,21 +97,25 @@ class HandlerChat:
         report = self.brokerInstance.getReport()
         exports = Export()
         exports.export_as_cvs(path=os.getenv("PATH_COMPARTIDA"),listado=report,nombre_fichero='report_balance.csv')
+        
+    def handleOnOff(self,isOn):
+        self.isOnEntorno = isOn
             
     async def handleEntornosChat(self,msg,chat_id,id_order):
-        if (chat_id == int(GROUPS.DEV.value)and self.environment == ENTORNOS.DEV.value and ("test" in msg.lower())):
+        if (chat_id == int(GROUPS.DEV.value)and self.environment == ENTORNOS.DEV.value ):
             await self.healthCheck(msg=msg,entorno=ENTORNOS.DEV.value)
             
-            '''
-            CODIGO DE PRUEBAS
-            '''
-            
-            snipersGold = SnipersGold(self.brokerInstance, f"{CONFIG_NAME_STRATEGY.SNIPERS_GOLD_VIP.value}",id_order)
-            snipersGold.handle(msg)
-            
-            '''
-            FIN
-            '''
+            if ("test" in msg.lower() and self.isOnEntorno):
+                '''
+                CODIGO DE PRUEBAS
+                '''
+                
+                snipersGold = SnipersGold(self.brokerInstance, f"{CONFIG_NAME_STRATEGY.SNIPERS_GOLD_VIP.value}",id_order)
+                snipersGold.handle(msg)
+                
+                '''
+                FIN
+                '''
                 
         if (chat_id == int(GROUPS.PRE)and self.environment == ENTORNOS.PRE.value):
             await self.healthCheck(msg=msg,entorno=ENTORNOS.PRE.value)
@@ -120,6 +124,10 @@ class HandlerChat:
             await self.healthCheck(msg=msg,entorno=ENTORNOS.PRO.value)
             
         if(msg.lower() == "report"): self.handleExportReport()
+        
+        if(msg.lower() == "on entorno"): self.handleOnOff(True)
+        
+        if(msg.lower() == "off entorno"): self.handleOnOff(False)
 
 
     async def healthCheck(self,msg,entorno):
