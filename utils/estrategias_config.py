@@ -4,19 +4,19 @@ class EstrategiasConfig:
         self.estrategias = {
             "VLAD": {
                 "riesgo": 0.005,
-                "tp_tope": 1,
+                "tp_tope": 2,
                 "close_pendings_in_new": True,
                 "close_opens_in_new": True,
             },
             "SPGV": {
                 "riesgo": 0.005,
-                "tp_tope": 3,
+                "tp_tope": 2,
                 "close_pendings_in_new": False,
                 "close_opens_in_new": False,
             },
             "SPGP": {
                 "riesgo": 0.005,
-                "tp_tope": 1,
+                "tp_tope": 2,
                 "close_pendings_in_new": True,
                 "close_opens_in_new": True,
             },

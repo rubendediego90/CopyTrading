@@ -11,7 +11,10 @@ class FTMOUtils:
 
     def filtrar_tps_no_validos(self, comentarios):
         """Filtra los comentarios con TP no válido según la estrategia configurada y devuelve solo aquellos que hayan alcanzado el BE."""
-
+        
+        if not comentarios:
+            return []
+        
         # Ordenar los comentarios de forma ascendente por id y TP
         comentarios_ordenados = sorted(
             comentarios, 
@@ -20,17 +23,13 @@ class FTMOUtils:
                 int(re.search(r'_(\d+)_TP(\d+)', x).group(2))
             )
         )
-        
+
         print("comentarios_ordenados", comentarios_ordenados)
 
-        # Inicializar variables
-        tps_por_id = []  # Lista para almacenar los TPs de cada id
-        comentarios_a_devolver = []  # Lista para almacenar los comentarios que cumplen la condición
-        id_actual = None  # Variable para gestionar el id actual
-        comentarios_id_actual = []  # Comentarios asociados al id actual
+        # Diccionario para almacenar los TPs por id
+        comentarios_por_id = {}
 
-        i = 0
-        # Procesar los comentarios
+        # Procesar los comentarios y organizarlos en el diccionario
         for comentario in comentarios_ordenados:
             # Extraemos la estrategia, id y TP del comentario
             match = re.match(r'(?P<estrategia>[A-Z]+)_(?P<id>\d+)_TP(?P<tp>\d+)', comentario, re.IGNORECASE)
@@ -40,32 +39,31 @@ class FTMOUtils:
             estrategia = match.group("estrategia").upper()
             tp = int(match.group("tp"))
             id_operacion = match.group("id")
-            tp_tope = self.estrategias_config.get(estrategia,"tp_tope")
+            tp_tope = self.estrategias_config.get(estrategia, "tp_tope")
 
-            # Añadimos el TP actual al listado de TPs para este id
-            tps_por_id.append(tp)
-            comentarios_id_actual.append(comentario)
-            
-            # Si el id de operación ha cambiado, procesamos el id anterior
-            if id_operacion != id_actual or i == (len(comentarios_ordenados) - 1):
-                # Verificamos si el primer TP (menor) de la operación anterior es igual a tp_tope
-                print("comentarios_id_actual",comentarios_id_actual)
-                print("tps_por_id",tps_por_id)
-                print("tp_tope",tp_tope)
-                print("id_actual",id_actual)
-                print("id_operacion",id_operacion)
-                if tps_por_id and (min(tps_por_id) >= tp_tope) : # Verificamos si el primer TP es igual al tp_tope
-                    print("entra a este if")
-                    comentarios_a_devolver.extend(comentarios_id_actual)
-                # Reiniciamos los comentarios para el nuevo id, pero no los TPs
-                tps_por_id = []  # Reiniciamos la lista de TPs
-                comentarios_id_actual = []
+            # Si el id de operación no está en el diccionario, inicializamos su lista de TPs
+            if id_operacion not in comentarios_por_id:
+                comentarios_por_id[id_operacion] = {'tps': [], 'comentarios': []}
 
-            # Actualizamos el id_actual para saber si el id cambia en el siguiente ciclo
-            id_actual = id_operacion
-            i = i +1
+            # Añadimos el TP y comentario al diccionario correspondiente
+            comentarios_por_id[id_operacion]['tps'].append(tp)
+            comentarios_por_id[id_operacion]['comentarios'].append(comentario)
 
-        print("comentarios_a_devolver",comentarios_a_devolver)
+        print("comentarios_por_id", comentarios_por_id)
+
+        comentarios_a_devolver = []
+
+        # Procesamos los TPs por id al final
+        for id_operacion, data in comentarios_por_id.items():
+            tps_por_id = data['tps']
+            comentarios_id_actual = data['comentarios']
+
+            # Verificamos si el primer TP (menor) de la operación alcanza el tp_tope
+            tp_tope = self.estrategias_config.get(estrategia, "tp_tope")
+            if tps_por_id and min(tps_por_id) >= tp_tope:
+                comentarios_a_devolver.extend(comentarios_id_actual)
+
+        print("comentarios_a_devolver", comentarios_a_devolver)
         return comentarios_a_devolver
 
     def obtener_comentarios(self, items):
