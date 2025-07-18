@@ -45,5 +45,5 @@ class OrderEvent(BaseEvent):
     sl: float
     tp: float
     volume: float
-    magic: float
+    magic: int
 

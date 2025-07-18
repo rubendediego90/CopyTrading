@@ -1,125 +1,122 @@
-from store.orders_store import ParameterStore
-import datetime
-from constantes.store_properties import STORE_PROPERTIES
 import re
-from collections import defaultdict
+from store.orders_store import ParameterStore
+from constantes.store_properties import STORE_PROPERTIES
+from utils.estrategias_config import EstrategiasConfig
 from brokers.MetaTrader5_broker import MetaTrader5Broker
-FTMO_CONDITION_PERCENTAGE = 4
 
 class FTMOUtils:
     def __init__(self):
         self.param_store = ParameterStore()
+        self.estrategias_config = EstrategiasConfig()
+
+    def filtrar_tps_no_validos(self, comentarios):
+        """Filtra los comentarios con TP no válido según la estrategia configurada y devuelve solo aquellos que hayan alcanzado el BE."""
+
+        # Ordenar los comentarios de forma ascendente por id y TP
+        comentarios_ordenados = sorted(
+            comentarios, 
+            key=lambda x: (
+                re.search(r'_(\d+)_TP(\d+)', x).group(1), 
+                int(re.search(r'_(\d+)_TP(\d+)', x).group(2))
+            )
+        )
         
-        pass
-    
-    def can_open_new_position(self,current_balance):
-        cash_last_balance = self.param_store.get(STORE_PROPERTIES.CASH_BALANCE.value)
-        if(cash_last_balance == None): cash_last_balance = 0.0
-        orders = self.param_store.get(STORE_PROPERTIES.ORDERS_OPEN_PENDINGS_LIST.value)
-        open_pendings_balance = 0.0
-        if(orders != None):
-            open_pendings_balance = sum(orden['perdida_estimada'] for orden in orders)
-        
-        balance_postions_closed = current_balance - cash_last_balance - open_pendings_balance
-        ammount_max_to_loss = cash_last_balance * FTMO_CONDITION_PERCENTAGE / 100
-        
-        print(f"🔴 Pérdida total estimada: {open_pendings_balance:.2f}")
-        print(f"🔴 Perdida maxima permitida: {ammount_max_to_loss:.2f}")
-        print(f"🔴 Balance actual: {balance_postions_closed:.2f}")
-        # se pone negativo porque el balance malo saldra negativo en la suma
-        can_open = ammount_max_to_loss > (-balance_postions_closed)
-        return can_open
-        
-        
-    def set_balance_data(self,current_balance):
-        #mirar la ficha de la store
-        fecha_balance = self.param_store.get_date(STORE_PROPERTIES.FECHA_BALANCE.value)
-        print("fecha y saved",fecha_balance)
-        
-        today = datetime.date.today()
-        if(fecha_balance == None or fecha_balance < today):
-            print("Seteo fecha y balance")
-            # Guardar la fecha actual
-            self.param_store.save_date(STORE_PROPERTIES.FECHA_BALANCE.value)
-            # Guardar balance
-            self.param_store.save_number(STORE_PROPERTIES.CASH_BALANCE.value, current_balance)
+        print("comentarios_ordenados", comentarios_ordenados)
+
+        # Inicializar variables
+        tps_por_id = []  # Lista para almacenar los TPs de cada id
+        comentarios_a_devolver = []  # Lista para almacenar los comentarios que cumplen la condición
+        id_actual = None  # Variable para gestionar el id actual
+        comentarios_id_actual = []  # Comentarios asociados al id actual
+
+        i = 0
+        # Procesar los comentarios
+        for comentario in comentarios_ordenados:
+            # Extraemos la estrategia, id y TP del comentario
+            match = re.match(r'(?P<estrategia>[A-Z]+)_(?P<id>\d+)_TP(?P<tp>\d+)', comentario, re.IGNORECASE)
+            if not match:
+                continue  # Si el comentario no coincide con el formato esperado, lo ignoramos
+
+            estrategia = match.group("estrategia").upper()
+            tp = int(match.group("tp"))
+            id_operacion = match.group("id")
+            tp_tope = self.estrategias_config.get(estrategia,"tp_tope")
+
+            # Añadimos el TP actual al listado de TPs para este id
+            tps_por_id.append(tp)
+            comentarios_id_actual.append(comentario)
             
-    def filtrar_tps_sin_tp1(self,comentarios):
-        grupos = defaultdict(list)
+            # Si el id de operación ha cambiado, procesamos el id anterior
+            if id_operacion != id_actual or i == (len(comentarios_ordenados) - 1):
+                # Verificamos si el primer TP (menor) de la operación anterior es igual a tp_tope
+                print("comentarios_id_actual",comentarios_id_actual)
+                print("tps_por_id",tps_por_id)
+                print("tp_tope",tp_tope)
+                print("id_actual",id_actual)
+                print("id_operacion",id_operacion)
+                if tps_por_id and (min(tps_por_id) >= tp_tope) : # Verificamos si el primer TP es igual al tp_tope
+                    print("entra a este if")
+                    comentarios_a_devolver.extend(comentarios_id_actual)
+                # Reiniciamos los comentarios para el nuevo id, pero no los TPs
+                tps_por_id = []  # Reiniciamos la lista de TPs
+                comentarios_id_actual = []
 
-        for comentario in comentarios:
-            match = re.match(r'(.*)_TP(\d+)', comentario)
-            if match:
-                prefix, tp_num = match.groups()
-                grupos[prefix].append((int(tp_num), comentario))
+            # Actualizamos el id_actual para saber si el id cambia en el siguiente ciclo
+            id_actual = id_operacion
+            i = i +1
 
-        resultado = []
+        print("comentarios_a_devolver",comentarios_a_devolver)
+        return comentarios_a_devolver
 
-        for prefix, tps in grupos.items():
-            tp_nums = [tp[0] for tp in tps]
-            if 1 not in tp_nums:
-                ordenados = sorted(tps)
-                resultado.extend([tp[1] for tp in ordenados])
-
-        return resultado
-
-    def obtener_comentarios(self,items):
+    def obtener_comentarios(self, items):
+        """Obtiene los comentarios de las órdenes."""
         return [item['comentario'] for item in items if 'comentario' in item]
-            
-    async def auto_sl(self,brokerInstance:MetaTrader5Broker):
-        #traer lista de ordenes abiertas y pendientes
+
+    def extraer_base_comentario(self, comentario):
+        """Remueve el sufijo _TPn."""
+        return re.sub(r'_TP\d+$', '', comentario)
+
+    async def auto_sl(self, brokerInstance: MetaTrader5Broker):
+        """Mueve el Stop Loss a Break Even si hay TP inválido y cierra las órdenes pendientes relacionadas."""
+        # Obtener órdenes abiertas y pendientes
         orders_pendings = brokerInstance.get_orders_pendings()
         positions_opens = brokerInstance.get_positions_open()
-        
+
         comentario_pendings_orders = [order.comment for order in orders_pendings]
         comentario_positions_opens = [order.comment for order in positions_opens]
         comentarios_positions_and_orders = comentario_pendings_orders + comentario_positions_opens
-        
-        comentarios_sin_tp_1 = self.filtrar_tps_sin_tp1(comentario_positions_opens)
-        comentarios_sin_tp_1_sin_duplicados = list(dict.fromkeys(comentarios_sin_tp_1))
-        
-        #comentarios a mover sl y a cerrar pendientes
-        for comentario in comentarios_sin_tp_1_sin_duplicados:
-            positionsFiltered = [pos for pos in positions_opens if pos.comment == comentario]
 
+        # Paso 1: Filtrar TPs inválidos solo en posiciones abiertas
+        comentarios_sin_tp_1 = self.filtrar_tps_no_validos(comentario_positions_opens)
+        comentarios_sin_tp_1_sin_duplicados = list(dict.fromkeys(comentarios_sin_tp_1))  # elimina duplicados
+
+        # Paso 2: Mover SL y cerrar pendientes relacionadas
+        for comentario in comentarios_sin_tp_1_sin_duplicados:
+            # Mover SL de las posiciones con TP inválido
+            print("Comentario no válido, mover SL:", comentario)
+            positionsFiltered = [pos for pos in positions_opens if pos.comment == comentario]
             for position in positionsFiltered:
                 brokerInstance.mover_stop_loss_be_by_position(position)
 
-            #quitamos los 3 ultimos caracteres TP1 o TP2 o TPn
-            orders_pendings_Filtered = [order for order in orders_pendings if comentario[:-3] in order.comment]
-
+            # Cerrar órdenes pendientes relacionadas
+            base_comentario = self.extraer_base_comentario(comentario)
+            orders_pendings_Filtered = [
+                order for order in orders_pendings if base_comentario in order.comment
+            ]
             for order_pending in orders_pendings_Filtered:
                 brokerInstance.close_pending_by_order(order_pending)
-                
-        #clean store sincronizar store y ordenes y posiciones
-        itemsStored = self.param_store.get(STORE_PROPERTIES.ORDERS_OPEN_PENDINGS_LIST.value)
+
+        # Paso 3: Limpiar comentarios obsoletos del almacenamiento
+        itemsStored = self.param_store.get(STORE_PROPERTIES.ORDERS_OPEN_PENDINGS_LIST.value) or []
         comentarios_stored = self.obtener_comentarios(itemsStored)
-        
-        #compara las dos listas, y busca los comentarios que no estan
-        comentarios_obsoletos = [item for item in comentarios_stored if item not in comentarios_positions_and_orders]
-        
-        #borra comentarios obsoletos
+
+        comentarios_obsoletos = [
+            item for item in comentarios_stored if item not in comentarios_positions_and_orders
+        ]
+
         self.param_store.remove_from_list(
             STORE_PROPERTIES.ORDERS_OPEN_PENDINGS_LIST.value,
             lambda item: item.get("comentario") in comentarios_obsoletos
         )
-           
-           
-           
-''''
- #chequa si se puede abrir una nueva operacion
-        #todo borrar
-        if(can_open_time == can_opem_time_default):
-            current_cash_balance = brokerInstance.getBalanceCash()
-            
-            #setea fecha y valor, se hace una vez al dia
-            ftmo_utils.set_balance_data(current_cash_balance)
-            
-            #evalua si se puede abrir orden
-            can_open_global = ftmo_utils.can_open_new_position(current_cash_balance)
-            ftmo_utils = None
-            can_open_time = 0
-            print("🟢 se puede abrir la operacion?")
 
-''' 
 
