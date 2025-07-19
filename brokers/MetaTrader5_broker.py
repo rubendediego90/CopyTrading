@@ -227,7 +227,7 @@ class MetaTrader5Broker():
             "action": mt5.TRADE_ACTION_DEAL,
             "symbol": order_event.symbol,
             "volume": order_event.volume,
-            'price': entry_price,
+            #'price': entry_price,
             "sl": order_event.sl,
             "tp": order_event.tp,
             "type": order_type,
@@ -238,7 +238,6 @@ class MetaTrader5Broker():
         }
         # Mandamos el trade request para ser ejecutado
         result = mt5.order_send(market_order_request)
-
         # Verificar el resultado de la ejecución de la orden
         if self._check_execution_status(result):
             print(f"{Utils.dateprint()} - Market Order {order_event.signal} para {order_event.symbol} de {order_event.volume} lotes ejecutada correctamente")

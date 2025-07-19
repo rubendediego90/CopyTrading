@@ -3,8 +3,6 @@ import threading
 import asyncio
 from telethon.sync import TelegramClient
 from telethon import events
-from constantes.grupos import GROUPS
-from constantes.canals import CANALS
 from utils.groups_canals import CanalsYGroups
 from brokers.MetaTrader5_broker import MetaTrader5Broker
 from store.orders_store import ParameterStore
