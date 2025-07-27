@@ -128,8 +128,23 @@ class HandlerChat:
         if(msg.lower() == "on entorno"): self.handleOnOff(True)
         
         if(msg.lower() == "off entorno"): self.handleOnOff(False)
-
-
+        
+        if(msg.lower() == "help"): await self.helpChat()
+        
+    async def helpChat(self):
+        
+        chat_id=None
+        if ENTORNOS.PRO == self.environment:
+            chat_id = GROUPS.PRO.value
+            
+        elif ENTORNOS.PRE == self.environment:
+            chat_id = GROUPS.PRE.value
+            
+        elif ENTORNOS.DEV == self.environment:
+            chat_id = GROUPS.DEV.value
+        msg = '1) hi => Chequear salud\n2) test TextoDeLaSeñal => Usa la prueba escrita en el entorno\n3) on entorno => Encender entorno\n4) off entorno => Apagar entorno'
+        await TelegramUtils.send_msg(msgToSend=msg,chat_id=chat_id)
+        
     async def healthCheck(self,msg,entorno):
         if msg.lower() != "hi" : return
         
@@ -143,7 +158,7 @@ class HandlerChat:
         elif ENTORNOS.DEV == entorno:
             chat_id = GROUPS.DEV.value
             
-        msg=  "Robin a su servicio"  
+        msg=  "Robin a su servicio, entorno:"  + str(self.isOnEntorno)
         await TelegramUtils.send_msg(msgToSend=msg,chat_id=chat_id)
         
     def setChatsToWatch(self):
