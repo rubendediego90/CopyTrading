@@ -12,6 +12,7 @@ from utils.exports import Export
 from utils.telegram_utils import TelegramUtils
 import os
 import re
+from constantes.chat_properties import CHAT_PROPERTIES
 
 class HandlerChat:
     def __init__(self,param_store,brokerInstance):
@@ -105,7 +106,7 @@ class HandlerChat:
         if (chat_id == int(GROUPS.DEV.value)and self.environment == ENTORNOS.DEV.value ):
             await self.healthCheck(msg=msg,entorno=ENTORNOS.DEV.value)
             
-            if ("test" in msg.lower() and self.isOnEntorno):
+            if (CHAT_PROPERTIES.TEST in msg.lower() and self.isOnEntorno):
                 '''
                 CODIGO DE PRUEBAS
                 '''
@@ -123,13 +124,13 @@ class HandlerChat:
         if (chat_id == int(GROUPS.PRO)and self.environment == ENTORNOS.PRO.value):
             await self.healthCheck(msg=msg,entorno=ENTORNOS.PRO.value)
             
-        if(msg.lower() == "report"): self.handleExportReport()
+        if(msg.lower() == CHAT_PROPERTIES.REPORT): self.handleExportReport()
         
-        if(msg.lower() == "on entorno"): self.handleOnOff(True)
+        if(msg.lower() == CHAT_PROPERTIES.ON_ENTORNO): self.handleOnOff(True)
         
-        if(msg.lower() == "off entorno"): self.handleOnOff(False)
+        if(msg.lower() == CHAT_PROPERTIES.OFF_ENTORNO): self.handleOnOff(False)
         
-        if(msg.lower() == "help"): await self.helpChat()
+        if(msg.lower() == CHAT_PROPERTIES.HELP): await self.helpChat()
         
     async def helpChat(self):
         
@@ -146,7 +147,7 @@ class HandlerChat:
         await TelegramUtils.send_msg(msgToSend=msg,chat_id=chat_id)
         
     async def healthCheck(self,msg,entorno):
-        if msg.lower() != "hi" : return
+        if msg.lower() != CHAT_PROPERTIES.HI : return
         
         chat_id=None
         if ENTORNOS.PRO == entorno:
