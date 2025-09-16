@@ -1,7 +1,8 @@
 from constantes.store_properties import STORE_PROPERTIES
 from handlers.vlad_signals import VladSignal
 from handlers.sinpers_gold import SnipersGold
-from handlers.us30_pro import US30ProSignal
+from handlers.johan_gold import JohanGoldSignal
+from handlers.nasdaq100 import Nas100Signal
 from handlers.ptjg_gold import PtjgGold
 from handlers.turbo import TurboSignal
 from constantes.config_comment import CONFIG_NAME_STRATEGY
@@ -12,6 +13,7 @@ from utils.exports import Export
 from utils.telegram_utils import TelegramUtils
 import os
 import re
+from constantes.chat_properties import CHAT_PROPERTIES
 
 class HandlerChat:
     def __init__(self,param_store,brokerInstance):
@@ -28,14 +30,14 @@ class HandlerChat:
         
         if chat_id_int == int(CANALS.SNIPERS_GOLD_VIP.value) and self.isOnEntorno:
             snipersGold = SnipersGold(self.brokerInstance, f"{CONFIG_NAME_STRATEGY.SNIPERS_GOLD_VIP.value}",id_order)
-            snipersGold.handle(mensaje)
+            #snipersGold.handle(mensaje)
             if self.environment == ENTORNOS.PRO : await self.sendToOtherEnvironment(chat_id_int,mensaje)
             
             return
 
         if chat_id_int == int(CANALS.SNIPERS_GOLD_PUBLIC.value) and self.isOnEntorno:
             snipersGold = SnipersGold(self.brokerInstance, f"{CONFIG_NAME_STRATEGY.SNIPERS_GOLD_PUB.value}",id_order)
-            snipersGold.handle(mensaje)
+            #snipersGold.handle(mensaje)
             
             if self.environment == ENTORNOS.PRO : await self.sendToOtherEnvironment(chat_id_int,mensaje)
             
@@ -43,25 +45,32 @@ class HandlerChat:
             
         if chat_id_int == int(CANALS.PTJG_GOLD_PUBLIC.value) and self.isOnEntorno:
             ptjgGold = PtjgGold(self.brokerInstance, f"{CONFIG_NAME_STRATEGY.PTJG_GOLD_PUB.value}",id_order)
-            ptjgGold.handle(mensaje)
+            #ptjgGold.handle(mensaje)
             if self.environment == ENTORNOS.PRO : await self.sendToOtherEnvironment(chat_id_int,mensaje)
             return
 
         if chat_id_int == int(CANALS.SIGNAL_VLAD.value ) and self.isOnEntorno:
             vladSignal = VladSignal(self.brokerInstance,f"{CONFIG_NAME_STRATEGY.VLAD.value}",id_order)
-            vladSignal.handle(mensaje)
+            #vladSignal.handle(mensaje)
             if self.environment == ENTORNOS.PRO : await self.sendToOtherEnvironment(chat_id_int,mensaje)
             return
             
-        if chat_id_int == int(CANALS.US30_PRO.value) and self.isOnEntorno:
-            nasPro = US30ProSignal(self.brokerInstance,f"{CONFIG_NAME_STRATEGY.US30_PRO.value}",id_order)
-            nasPro.handle(mensaje)
+        if chat_id_int == int(CANALS.NASDAQ_100.value) and self.isOnEntorno:
+            nasPro = Nas100Signal(self.brokerInstance,f"{CONFIG_NAME_STRATEGY.NASDAQ_100.value}",id_order)
+            #nasPro.handle(mensaje)
             if self.environment == ENTORNOS.PRO: await self.sendToOtherEnvironment(chat_id_int,mensaje)
             return
             
+        if chat_id_int == int(CANALS.JOHAN_GOLD.value) and self.isOnEntorno:
+            johan = JohanGoldSignal(self.brokerInstance, f"{CONFIG_NAME_STRATEGY.JOAN_GOLD_VIP.value}",id_order)
+            johan.handle(mensaje)
+            if self.environment == ENTORNOS.PRO : await self.sendToOtherEnvironment(chat_id_int,mensaje)
+            
+            return
+        
         if chat_id_int == int(CANALS.TURBO_PUBLIC.value) and self.isOnEntorno:
             turbo = TurboSignal(self.brokerInstance,f"{CONFIG_NAME_STRATEGY.TURBO_PUBLIC.value}",id_order)
-            turbo.handle(mensaje)
+            #turbo.handle(mensaje)
             if self.environment == ENTORNOS.PRO : await self.sendToOtherEnvironment(chat_id_int,mensaje)
             
             return
@@ -105,13 +114,12 @@ class HandlerChat:
         if (chat_id == int(GROUPS.DEV.value)and self.environment == ENTORNOS.DEV.value ):
             await self.healthCheck(msg=msg,entorno=ENTORNOS.DEV.value)
             
-            if ("test" in msg.lower() and self.isOnEntorno):
+            if (CHAT_PROPERTIES.TEST in msg.lower() and self.isOnEntorno):
                 '''
                 CODIGO DE PRUEBAS
                 '''
-                
-                snipersGold = SnipersGold(self.brokerInstance, f"{CONFIG_NAME_STRATEGY.SNIPERS_GOLD_VIP.value}",id_order)
-                snipersGold.handle(msg)
+                johan = JohanGoldSignal(self.brokerInstance, f"{CONFIG_NAME_STRATEGY.JOAN_GOLD_VIP.value}",id_order)
+                johan.handle(msg)
                 
                 '''
                 FIN
@@ -123,15 +131,30 @@ class HandlerChat:
         if (chat_id == int(GROUPS.PRO)and self.environment == ENTORNOS.PRO.value):
             await self.healthCheck(msg=msg,entorno=ENTORNOS.PRO.value)
             
-        if(msg.lower() == "report"): self.handleExportReport()
+        if(msg.lower() == CHAT_PROPERTIES.REPORT): self.handleExportReport()
         
-        if(msg.lower() == "on entorno"): self.handleOnOff(True)
+        if(msg.lower() == CHAT_PROPERTIES.ON_ENTORNO): self.handleOnOff(True)
         
-        if(msg.lower() == "off entorno"): self.handleOnOff(False)
-
-
+        if(msg.lower() == CHAT_PROPERTIES.OFF_ENTORNO): self.handleOnOff(False)
+        
+        if(msg.lower() == CHAT_PROPERTIES.HELP): await self.helpChat()
+        
+    async def helpChat(self):
+        
+        chat_id=None
+        if ENTORNOS.PRO == self.environment:
+            chat_id = GROUPS.PRO.value
+            
+        elif ENTORNOS.PRE == self.environment:
+            chat_id = GROUPS.PRE.value
+            
+        elif ENTORNOS.DEV == self.environment:
+            chat_id = GROUPS.DEV.value
+        msg = '1) hi => Chequear salud\n2) test TextoDeLaSeñal => Usa la prueba escrita en el entorno\n3) on entorno => Encender entorno\n4) off entorno => Apagar entorno'
+        await TelegramUtils.send_msg(msgToSend=msg,chat_id=chat_id)
+        
     async def healthCheck(self,msg,entorno):
-        if msg.lower() != "hi" : return
+        if msg.lower() != CHAT_PROPERTIES.HI : return
         
         chat_id=None
         if ENTORNOS.PRO == entorno:
@@ -143,7 +166,7 @@ class HandlerChat:
         elif ENTORNOS.DEV == entorno:
             chat_id = GROUPS.DEV.value
             
-        msg=  "Robin a su servicio"  
+        msg=  "Robin a su servicio, entorno:"  + str(self.isOnEntorno)
         await TelegramUtils.send_msg(msgToSend=msg,chat_id=chat_id)
         
     def setChatsToWatch(self):
@@ -167,7 +190,7 @@ class HandlerChat:
             int(CANALS.SNIPERS_GOLD_VIP),
             int(CANALS.SNIPERS_GOLD_PUBLIC),
             int(CANALS.TURBO_PUBLIC),
-            int(CANALS.US30_PRO),
+            int(CANALS.NASDAQ_100),
             ]
 
         if entorno == ENTORNOS.DEV:

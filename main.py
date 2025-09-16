@@ -9,6 +9,7 @@ from store.orders_store import ParameterStore
 from utils.ftmo_utils import FTMOUtils
 from handlers.handler_chat import HandlerChat
 from dotenv import load_dotenv
+from constantes.chat_properties import CHAT_PROPERTIES
 
 load_dotenv()
 
@@ -28,7 +29,7 @@ client.loop.run_until_complete(canalsYGroups.getGroups())
 
 param_store = ParameterStore()
 brokerInstance = MetaTrader5Broker()
-handlerChat = HandlerChat(param_store,brokerInstance)
+handlerChat = HandlerChat(param_store, brokerInstance)
 
 chats_a_escuchar = handlerChat.setChatsToWatch()
 
@@ -38,8 +39,15 @@ async def manejador_mensajes(event):
     global can_open_global 
     chat_id = event.chat_id
     mensaje = event.raw_text
+    
+    # Verificar si el mensaje es una respuesta a otro
+    if event.reply_to_msg_id:
+        original_message = await client.get_messages(chat_id, ids=event.reply_to_msg_id)
+
+        mensaje = CHAT_PROPERTIES.RESP_MSG + original_message.text + CHAT_PROPERTIES.OLD_MSG + mensaje
+    
     await canalsYGroups.msgLog(event)
-    await handlerChat.handle(chat_id,mensaje)
+    await handlerChat.handle(chat_id, mensaje)
 
 
 # ✅ HILO SECUNDARIO – imprime mensaje cada 5 segundos

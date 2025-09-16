@@ -1,9 +1,9 @@
-from constantes.types import US30PRO, SYMBOL
+from constantes.types import NAS100, SYMBOL
 import re
 from brokers.MetaTrader5_broker import MetaTrader5Broker
 from utils.common import Common
 
-class US30ProSignal:
+class Nas100Signal:
     def __init__(self, brokerInstance : MetaTrader5Broker, comentario,id_order):
         self.brokerInstance : MetaTrader5Broker = brokerInstance
         self.comentario = comentario
@@ -11,7 +11,7 @@ class US30ProSignal:
         pass
         
     def handle(self,msg):
-        print('*US 30 PRO*',msg)
+        print('*NAS 100*',msg)
         symbol = self.getSymbol(msg)
         if(symbol == None):
             print('mensaje sin identificar simbolo',msg)
@@ -38,34 +38,41 @@ class US30ProSignal:
 
     def getSymbol(self, msg):
         msg = msg.lower()
-        if (
-            US30PRO.US30.lower() in msg
-        ):
+        if (NAS100.US30.lower() in msg):
+            return SYMBOL.US30.value
+        
+        if (NAS100.US30.lower() in msg):
             return SYMBOL.US30.value
         return None
     
     def getOrderType(self,msg):
         words_open = ["tp","sl"]
+        words_move_sl = ["set be"]
 
         msg_lower = msg.lower()
         words_open_lower = [p.lower() for p in words_open]
+        words_move_sl_lower = [p.lower() for p in words_move_sl]
         
         hasNewOrder = False
+        hasMoveSL = False
         
         if all(palabra in msg_lower for palabra in words_open_lower):
             hasNewOrder = True
             
+        if all(palabra in msg_lower for palabra in words_move_sl_lower):
+            hasMoveSL = True
+            
         return {
             "hasNewOrder": hasNewOrder,
-            
+            "hasMoveSL": hasMoveSL,
         }
         
-    #TODO revisar
     def extraer_valores(self, texto):
         patrones = {
-            "SL": r"\bSL\s+([\d.,]+[KkMmBb]?)",
-            "TP": r"\bTP\s+([\d.,]+[KkMmBb]?)",
-            "Entry": r"\b(?:|BUY|SELL)\s+([\d.,]+[KkMmBb]?)",
+            "SL": r"\bSL[:\-]?\s*([\d.,]+[KkMmBb]?)",  # Añadido para manejar 'K', 'M', 'B'
+            "TP": r"\bTP[:\-]?\s*([\d.,]+[KkMmBb]?)",
+            "Entry": r"\b(?:ahora)[:\-]?\s*([\d.,]+[KkMmBb]?)",
+            "rango":r"([\d.,]+[KkMmBb]?)\s*(?:a|-|~|/)\s*([\d.,]+[KkMmBb]?)"
         }
 
         resultados = {
@@ -73,9 +80,9 @@ class US30ProSignal:
                       'SL': None,
                       'isShort':None,
                       'isLong':None,
+                      'rango': None,  # Nuevo campo para almacenar el rango,
                       'rango_inferior':None,
                       'rango_superior':None,
-                      'Entry':None,
                       }
         
 
@@ -85,6 +92,13 @@ class US30ProSignal:
             coincidencias = re.findall(patron, texto, flags=re.IGNORECASE)
             extracciones[clave] = coincidencias if coincidencias else None
             
+        if extracciones['rango'] and len(extracciones['rango'][0]) == 2:
+            extracciones['rango_inferior'] = [extracciones['rango'][0][0]]
+            extracciones['rango_superior'] = [extracciones['rango'][0][1]]
+        extracciones['rango'] = None 
+        
+        print("extracciones",extracciones)
+
         # Ahora, limpiamos (casteamos) los valores extraídos
         for clave, coincidencias in extracciones.items():
             if coincidencias:
@@ -115,12 +129,4 @@ class US30ProSignal:
                 resultados['isLong'] = True
 
 
-        return resultados
-
-
-
-
-
-        
-
-    
+        return resultados   

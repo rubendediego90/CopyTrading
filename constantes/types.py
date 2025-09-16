@@ -40,10 +40,11 @@ class TURBO(str,Enum):
     BTC = "BTC"
     BTC_USD = "BTCUSD"
     
-    
-    
-class US30PRO(str,Enum):
+class NAS100(str,Enum):
     US30 = "US30"
+    XAUUSD = "XAUUSD"
+    NASDAQ = "NAS100"
+    
     
 class ENTORNOS(str,Enum):
     DEV = "DEV"

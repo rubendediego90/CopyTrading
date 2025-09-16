@@ -71,7 +71,6 @@ class TurboSignal:
             "hasMoveSL": hasMoveSL,
         }
         
-    #TODO revisar
     def extraer_valores(self, texto):
         patrones = {
             "SL": r"\bSL[:\s]*([\d.,]+[KkMmBb]?)",

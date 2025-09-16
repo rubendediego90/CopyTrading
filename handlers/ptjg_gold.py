@@ -119,12 +119,4 @@ class PtjgGold:
                 resultados['isLong'] = True
 
 
-        return resultados
-
-
-
-
-
-        
-
-    
+        return resultados   
