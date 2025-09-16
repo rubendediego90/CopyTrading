@@ -4,9 +4,10 @@ from enum import Enum
 class CONFIG_NAME_STRATEGY(str,Enum):
     PTJG_GOLD_PUB = "PTGP"
     SNIPERS_GOLD_VIP = "SPGV"
+    JOAN_GOLD_VIP = "JOAN"
     SNIPERS_GOLD_PUB = "SPGP"
     VLAD = "VLAD"
-    US30_PRO = "U30P"
+    NASDAQ_100 = "N100"
     TURBO_PUBLIC = "TURP"
     
 class CONFIG_STRATEGY_PROPERTIES(str,Enum):

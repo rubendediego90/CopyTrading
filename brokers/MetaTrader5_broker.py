@@ -373,14 +373,34 @@ class MetaTrader5Broker():
     def setComment(self,nombreStrategy,id_order,num):
         return f"{nombreStrategy}_{id_order}_TP{num}"
     
-    def handle_order(self, valores, symbol, tpList, nombreStrategy,id_order,entry_prices_distribution):
+    def setTypeOrder(self, valores):
+        tipo_orden = valores.get("Type")
+
+        if tipo_orden is not None:
+            tipo_orden = tipo_orden.lower().strip()
+            
+            mapeo_mt5 = {
+                "buy_limit": mt5.ORDER_TYPE_BUY_LIMIT,
+                "buy_stop": mt5.ORDER_TYPE_BUY_STOP,
+                "sell_limit": mt5.ORDER_TYPE_SELL_LIMIT,
+                "sell_stop": mt5.ORDER_TYPE_SELL_STOP,
+                "buy": mt5.ORDER_TYPE_BUY,
+                "sell": mt5.ORDER_TYPE_SELL
+            }
+            return mapeo_mt5.get(tipo_orden, None)  # ✅ devuelve el valor correcto o None
+        return None  # ✅ si tipo_orden es None desde el principio
+
+    
+    def handle_order(self, valores, symbol, tpList, nombreStrategy,id_order,entry_prices_distribution=None,price_open=None,riskParam=None):
         #Cierra ordenes anteriores con mismo comentario
         close_open_in_new = self.estrategiasConfig.get(nombreStrategy,CONFIG_STRATEGY_PROPERTIES.CLOSE_OPENS_IN_NEW)
         close_pendings_in_new = self.estrategiasConfig.get(nombreStrategy,CONFIG_STRATEGY_PROPERTIES.CLOSE_PENDIGNS_IN_NEW)
         if(close_open_in_new): self.close_partial(symbol,nombre_estrategia=nombreStrategy,partial=100)
         if(close_pendings_in_new): self.close_pending(symbol,nombre_estrategia=nombreStrategy)
         
-        risk = self.estrategiasConfig.get(nombreStrategy,CONFIG_STRATEGY_PROPERTIES.RISK)
+        risk = riskParam
+        if riskParam == None:
+            risk = self.estrategiasConfig.get(nombreStrategy,CONFIG_STRATEGY_PROPERTIES.RISK)
         
         self.parameterStore.remove_from_list(STORE_PROPERTIES.ORDERS_OPEN_PENDINGS_LIST.value, lambda item: item.get("symbol") == symbol and item.get("nombreStrategy") == nombreStrategy)
         
@@ -389,6 +409,7 @@ class MetaTrader5Broker():
         is_long = valores["isLong"]
         is_short = valores["isShort"]
         stop_loss = valores["SL"]
+        type_order = self.setTypeOrder(valores)
 
         def enviar_ordenes_market(lotes, signal_type,entry_price):
             for i, tp in enumerate(tpList, start=1):
@@ -423,30 +444,31 @@ class MetaTrader5Broker():
         current_ask = tick.ask
         current_bid = tick.bid
         
-        if not has_range:
+        if not has_range and (is_long or is_short):
             entry_price_calc = current_ask if is_long else current_bid
             lotes = self.calc_lotes(sl=stop_loss, entry=entry_price_calc, risk=risk, numTP=num_tps)
             signal_type = SignalType.BUY if is_long else SignalType.SELL
             enviar_ordenes_market(lotes, signal_type,entry_price_calc)
             return
 
-        # Tiene rango: asegurar que rango_inferior < rango_superior
-        rango_inferior = min(valores["rango_inferior"], valores["rango_superior"])
-        rango_superior = max(valores["rango_inferior"], valores["rango_superior"])
+        if(valores["rango_inferior"] is not None or valores["rango_superior"] is not None):
+            # Tiene rango: asegurar que rango_inferior < rango_superior
+            rango_inferior = min(valores["rango_inferior"], valores["rango_superior"])
+            rango_superior = max(valores["rango_inferior"], valores["rango_superior"])
+            
+            # Entrar al mercado si el precio está dentro del rango
+            signal_type = SignalType.BUY if is_long else SignalType.SELL
+
+            if is_long and rango_inferior <= current_ask <= rango_superior:
+                lotes = self.calc_lotes(sl=stop_loss, entry=current_ask, risk=risk, numTP=num_tps)
+                enviar_ordenes_market(lotes, signal_type,current_ask)
+                return
+
+            if is_short and rango_inferior <= current_bid <= rango_superior:
+                lotes = self.calc_lotes(sl=stop_loss, entry=current_bid, risk=risk, numTP=num_tps)
+                enviar_ordenes_market(lotes, signal_type,current_bid)
+                return
         
-        # Entrar al mercado si el precio está dentro del rango
-        signal_type = SignalType.BUY if is_long else SignalType.SELL
-
-        if is_long and rango_inferior <= current_ask <= rango_superior:
-            lotes = self.calc_lotes(sl=stop_loss, entry=current_ask, risk=risk, numTP=num_tps)
-            enviar_ordenes_market(lotes, signal_type,current_ask)
-            return
-
-        if is_short and rango_inferior <= current_bid <= rango_superior:
-            lotes = self.calc_lotes(sl=stop_loss, entry=current_bid, risk=risk, numTP=num_tps)
-            enviar_ordenes_market(lotes, signal_type,current_bid)
-            return
-
         # Si no está en el rango, dejar orden pendiente
         self.handle_order_pending(
             symbol=symbol,
@@ -458,33 +480,11 @@ class MetaTrader5Broker():
             isShort=is_short,
             tick_symbol=tick,
             nombreStrategy=nombreStrategy,
-            id_order=id_order
+            id_order=id_order,
+            type_order=type_order,
+            price_open=price_open
+            
         )
-        
-    def generateReportError(request,result,lastError):
-        type_order = None  # Inicializamos la variable de tipo de orden
-
-        if request["type"] == mt5.ORDER_TYPE_BUY:  # Si es una orden de compra (long)
-            type_order = "long"
-        elif request["type"] == mt5.ORDER_TYPE_SELL:  # Si es una orden de venta (short)
-            type_order = "short"
-        else:
-            type_order = "desconocido"
-        lines = [
-            f"Error: {result.comment}",
-            f"Last error:{lastError}",
-            f"Result:{result}",
-            f"Simbolo: {request.symbol}",
-            f"Comentario: {request.comment}",
-            f"Stop loss: {request.sl}",
-            f"TP: {request.tp}",
-            f"Lote: {request.volume}",
-            f"Entrada: {request.price}",
-            f"Tipo: {type_order}",
-        ]
-        
-        exports = Export()
-        exports.export_as_txt("errores", lines, f"log_errores {Utils.dateprint()}")
         
             # === ENVÍO DE ÓRDENES PENDIENTES ===
     def send_pending_order(self,symbol,order_type, entry_price, sl_price, tp_price, lot,comment,i,nombreStrategy,id_order):
@@ -503,9 +503,11 @@ class MetaTrader5Broker():
             "magic":id_order,
         }
         result = mt5.order_send(request)
+        if result is None:
+            print("Error-", mt5.last_error())
+            return
         if result.retcode != mt5.TRADE_RETCODE_DONE:
             print(f"❌ Error: {result.comment} enviada: {entry_price}, lote: {lot}, SL: {sl_price}, TP: {tp_price}")
-            self.generateReportError(request,result,mt5.last_error())
         else:
             print(f"✅ {order_type} enviada: {entry_price}, lote: {lot}, SL: {sl_price}, TP: {tp_price}")
             orden_data = {
@@ -536,12 +538,19 @@ class MetaTrader5Broker():
             return orders
     
     
-    def handle_order_pending(self,symbol,risk,sl,tpList,entry_prices_distribution,isShort,isLong,tick_symbol,nombreStrategy,id_order):
+    def handle_order_pending(self,symbol,risk,sl,tpList,entry_prices_distribution,isShort,isLong,tick_symbol,nombreStrategy,id_order,type_order=None,price_open=None):
         RISK_PERCENT = risk  # % de riesgo por operación
         STOP_LOSS_PRICE = sl # SL absoluto (ej. 2000)
         take_profits = tpList  # TPs por entrada
-
-        print("entry_prices",entry_prices_distribution)
+        
+        if(type_order is not None and price_open is not None):
+            i = 0
+            comment = self.setComment(nombreStrategy=nombreStrategy,id_order=id_order,num=i)
+            lote = self.calc_lotes(sl=STOP_LOSS_PRICE, entry=price_open, risk=risk, numTP=1)
+            tp=take_profits[0]
+            self.send_pending_order(symbol,type_order, price_open, STOP_LOSS_PRICE, tp, lote,comment,i,nombreStrategy,id_order)
+            return
+        ##send_pending_order
         
         # === ENVIAR TODAS LAS ÓRDENES ===
         tick = tick_symbol
