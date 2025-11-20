@@ -5,17 +5,11 @@ from indicadores.indicadores import calcular_rsi, calcular_ema, calcular_adx
 from utils.helpers import convertir_rates_a_dataframe, timeframe_to_seconds
 from core.deteccion import obtener_velas_cerradas
 
-def ema_rsi_adx(symbol, timeframe, n, rsi_period=14, adx_length=14, adx_smoothing=14, ema_period=50):
-    # 🔧 Barras extra para estabilización
-    extra_barras = ema_period*2  # Puedes aumentar este número si quieres más "warmup"
+def ema_rsi_adx(symbol, timeframe, n, rsi_period=14, adx_length=14, adx_smoothing=14, ema_period=50, barras_totales=10):
+    # Usar directamente barras_totales sin cálculos adicionales
+    print("🧮 Barras totales a obtener:", barras_totales)
     
-    # Calculamos cuántas velas necesitamos en total
-    max_indicador_periodo = max(rsi_period, ema_period, adx_length * 2 + adx_smoothing)
-    minimo_barras = n + max_indicador_periodo + 1 + extra_barras
-
-    print("🧮 Barras pedidas (con margen extra):", minimo_barras)
-    
-    velas = obtener_velas_cerradas(symbol, timeframe, minimo_barras)
+    velas = obtener_velas_cerradas(symbol, timeframe, barras_totales)
     if velas is None:
         print("❌ No se pudieron obtener las velas cerradas.")
         return
@@ -23,7 +17,7 @@ def ema_rsi_adx(symbol, timeframe, n, rsi_period=14, adx_length=14, adx_smoothin
     df = convertir_rates_a_dataframe(velas)
     duracion = timeframe_to_seconds(timeframe)
 
-    print(f"📊 Últimas {n} velas cerradas de {symbol} con RSI, ADX y EMA (calculadas con {minimo_barras} barras de contexto):")
+    print(f"📊 Últimas {n} velas cerradas de {symbol} con RSI, ADX y EMA (calculadas con {barras_totales} barras de contexto):")
 
     # ✅ Calculamos indicadores sobre todo el dataframe
     df['RSI'] = calcular_rsi(df, rsi_period)

@@ -50,7 +50,8 @@ def main():
                         rsi_period=config["rsi_period"],
                         adx_length=config["adx_length"],
                         adx_smoothing=config["adx_smoothing"],
-                        ema_period=config["ema_period"]
+                        ema_period=config["ema_period"],
+                        barras_totales=config["barras_totales"]
                     )
             time.sleep(1)
 

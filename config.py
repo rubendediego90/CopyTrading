@@ -8,7 +8,8 @@ SYMBOL_CONFIGS = {
         "rsi_period": 3,
         "adx_length": 5,
         "adx_smoothing": 5,
-        "ema_period": 50
+        "ema_period": 50,
+        "barras_totales": 100
     },
     "BTCUSD": {
         "enabled": False,  # ❌ No usar este símbolo
@@ -17,6 +18,7 @@ SYMBOL_CONFIGS = {
         "rsi_period": 7,
         "adx_length": 10,
         "adx_smoothing": 5,
-        "ema_period": 100
+        "ema_period": 100,
+        "barras_totales": 100
     }
 }
