@@ -54,8 +54,10 @@ def validar_contexto_ema(df, idx_inicio_bloque, ema_period, side, verbose=False)
     """
     PASO 8: Valida que las 10 velas anteriores estén al mismo lado de la EMA.
     """
-    inicio = max(0, idx_inicio_bloque - 10)
-    velas_contexto = df.iloc[inicio:idx_inicio_bloque]
+    # Selecciona las 10 velas previas al bloque, incluyendo la vela justo antes del bloque
+    fin = idx_inicio_bloque  # Exclusivo
+    inicio = max(0, fin - 10)
+    velas_contexto = df.iloc[inicio:fin]
     logs = []
     
     if len(velas_contexto) == 0:
@@ -66,7 +68,8 @@ def validar_contexto_ema(df, idx_inicio_bloque, ema_period, side, verbose=False)
     cruces_count = 0
     velas_lado = 0
     
-    for i, row in velas_contexto.iterrows():
+    # Imprimir solo las 10 velas previas, con índice relativo 1-10
+    for rel_idx, (i, row) in enumerate(velas_contexto.iterrows(), start=1):
         ema_val = row[ema_col]
         close = row['close']
 
@@ -74,8 +77,8 @@ def validar_contexto_ema(df, idx_inicio_bloque, ema_period, side, verbose=False)
             logs.append(f"[ERROR] CONTEXTO [{i}]: EMA es NaN")
             return False, logs
 
-        # Añadir info de precios por vela para trazabilidad
-        logs.append(f"  [{i}] time={row['time']}, O={row['open']:.2f}, H={row['high']:.2f}, L={row['low']:.2f}, C={close:.2f}, EMA={ema_val:.2f}")
+        # Añadir info de precios por vela para trazabilidad (índice relativo)
+        logs.append(f"  [CTX {rel_idx}] time={row['time']}, O={row['open']:.2f}, H={row['high']:.2f}, L={row['low']:.2f}, C={close:.2f}, EMA={ema_val:.2f}")
 
         if side == 'long':
             en_lado = close > ema_val
@@ -275,9 +278,9 @@ def evaluar_entrada_para_vela(df, idx, ema_period, adx_min=30, adx_col='ADX_14')
             print(f"   [RESULT] {side.upper()} RECHAZADO en validación de bloque/contexto")
             continue
 
-        senal = crear_senal(side, idx, row['close'], extremo, len(bloque))
-        resultado[side] = senal
-        print(f"   [RESULT] {side.upper()} ACEPTADO — señal construida")
+    senal = crear_senal(side, idx, row['close'], extremo, len(bloque))
+    resultado[side] = senal
+    print(f"   [RESULT] {side.upper()} ACEPTADO — señal construida | STOP LOSS: {senal['stop_loss']:.2f}")
 
     return resultado
 
