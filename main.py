@@ -8,6 +8,7 @@ from config import SYMBOL_CONFIGS
 from utils import formatear_vela
 from core import nueva_vela_cerrada
 from estrategias.ema_rsi_adx import ema_rsi_adx
+from event.events import OrderEvent, OrderType, SignalType
 from brokers.MetaTrader5_broker import MetaTrader5Broker
 
 # Logger que escribe en consola y en archivo
@@ -33,6 +34,40 @@ class DualLogger:
 # Redirigir print a logger dual
 sys.stdout = DualLogger('logs.txt')
 
+
+def abrir_operacion(broker, symbol, senal, magic=123456, comentario="EMA_RSI_ADX"):
+    """
+    Abre una operación en MetaTrader5 con TP 1:1 respecto al SL.
+    senal: dict con 'side', 'entry_price', 'stop_loss'
+    """
+    from config import SYMBOL_CONFIGS
+    entry = senal['entry_price']
+    sl = senal['stop_loss']
+    # Calcular TP 1:1
+    if senal['side'] == 'long':
+        tp = entry + abs(entry - sl)
+        signal_type = SignalType.BUY
+    else:
+        tp = entry - abs(entry - sl)
+        signal_type = SignalType.SELL
+
+    # Usar el riesgo configurado para el símbolo
+    risk = SYMBOL_CONFIGS[symbol].get('risk', 0.01)
+    broker.setSymbolInfo(symbol)
+    volume = broker.calc_lotes(sl, entry, numTP=1, risk=risk)
+
+    order_event = OrderEvent(
+        symbol=symbol,
+        signal=signal_type,
+        target_order=OrderType.MARKET,
+        comment=comentario,
+        sl=sl,
+        tp=tp,
+        volume=volume,
+        magic=magic
+    )
+    broker.execute_order(order_event)
+    print(f"[ORDER] Operación enviada: {symbol} {senal['side'].upper()} Entry={entry:.2f} SL={sl:.2f} TP={tp:.2f} Vol={volume:.3f} (Riesgo: {risk*100:.2f}%)")
 
 def main():
     try:
@@ -85,8 +120,10 @@ def main():
                         print(f"\n[SIGNAL] Señales generadas para {symbol}:")
                         if entradas.get('long'):
                             print(f"   LONG: Entry={entradas['long']['entry_price']:.2f}, SL={entradas['long']['stop_loss']:.2f}")
+                            abrir_operacion(broker, symbol, entradas['long'])
                         if entradas.get('short'):
                             print(f"   SHORT: Entry={entradas['short']['entry_price']:.2f}, SL={entradas['short']['stop_loss']:.2f}")
+                            abrir_operacion(broker, symbol, entradas['short'])
             time.sleep(1)
 
     except KeyboardInterrupt:

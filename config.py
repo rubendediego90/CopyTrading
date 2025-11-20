@@ -11,7 +11,8 @@ SYMBOL_CONFIGS = {
         "adx_length": 5,
         "adx_smoothing": 5,
         "ema_period": 50,
-        "barras_totales": 100
+        "barras_totales": 100,
+        "risk": 0.01  # Riesgo por operación (1%)
     },
     "BTCUSD": {
         "enabled": False,  # No usar este símbolo
@@ -21,7 +22,8 @@ SYMBOL_CONFIGS = {
         "adx_length": 10,
         "adx_smoothing": 5,
         "ema_period": 100,
-        "barras_totales": 100
+        "barras_totales": 100,
+        "risk": 0.01  # Riesgo por operación (1%)
     }
 }
 
