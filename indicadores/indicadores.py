@@ -3,7 +3,7 @@
 import pandas as pd
 import pandas_ta as ta
 
-# 📈 Calcula RSI
+# Calcula RSI
 def calcular_rsi(df, periodo=14):
     return ta.rsi(df['close'], length=periodo)
 
@@ -14,7 +14,7 @@ def calcular_adx(df, di_length=14, adx_smoothing=14):
         return pd.DataFrame(columns=['ADX_14', 'DMP_14', 'DMN_14'])
     return adx
 
-# 📊 Calcula EMA
+# Calcula EMA
 
 def calcular_ema(df, periodo=50):
     """

@@ -2,7 +2,7 @@ import MetaTrader5 as mt5
 #Tutorial 
 SYMBOL_CONFIGS = {
     "XAUUSD": {
-        "enabled": True,  # ✅ Usar este símbolo
+        "enabled": True,  # Usar este símbolo
         "timeframe": mt5.TIMEFRAME_M5,
         "n": 60,
         "rsi_period": 3,
@@ -12,7 +12,7 @@ SYMBOL_CONFIGS = {
         "barras_totales": 100
     },
     "BTCUSD": {
-        "enabled": False,  # ❌ No usar este símbolo
+        "enabled": False,  # No usar este símbolo
         "timeframe": mt5.TIMEFRAME_M5,
         "n": 10,
         "rsi_period": 7,

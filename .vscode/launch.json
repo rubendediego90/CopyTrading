@@ -1,0 +1,17 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Run main.py (local .conda)",
+      "type": "python",
+      "request": "launch",
+      "program": "${workspaceFolder}/main.py",
+      "console": "integratedTerminal",
+      "env": {
+        "PYTHONIOENCODING": "utf-8"
+      },
+      "cwd": "${workspaceFolder}",
+      "justMyCode": false
+    }
+  ]
+}

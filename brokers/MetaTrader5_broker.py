@@ -79,9 +79,9 @@ class MetaTrader5Broker:
 
         result = mt5.order_send(request)
         if self._check_execution_status(result):
-            print(f"✅ Orden Market ejecutada: {order_event.symbol} {order_event.signal} vol: {order_event.volume}")
+            print(f"[OK] Orden Market ejecutada: {order_event.symbol} {order_event.signal} vol: {order_event.volume}")
         else:
-            print(f"❌ Error al ejecutar orden: {result.comment}")
+            print(f"[ERROR] Error al ejecutar orden: {result.comment}")
 
     def _check_execution_status(self, result) -> bool:
         return result.retcode in [mt5.TRADE_RETCODE_DONE, mt5.TRADE_RETCODE_DONE_PARTIAL]
@@ -114,9 +114,9 @@ class MetaTrader5Broker:
         }
         result = mt5.order_send(request)
         if self._check_execution_status(result):
-            print(f"✅ SL movido a BE: {position.symbol}, ticket: {position.ticket}")
+            print(f"[OK] SL movido a BE: {position.symbol}, ticket: {position.ticket}")
         else:
-            print(f"❌ Error al mover SL a BE: {result.comment}")
+            print(f"[ERROR] Error al mover SL a BE: {result.comment}")
 
         '''
 
@@ -148,9 +148,9 @@ class MetaTrader5Broker:
 
                 result = mt5.order_send(close_request)
                 if self._check_execution_status(result):
-                    print(f"✅ Parcial cerrada: {pos.symbol} ticket {pos.ticket}")
+                    print(f"[OK] Parcial cerrada: {pos.symbol} ticket {pos.ticket}")
                 else:
-                    print(f"❌ Error al cerrar parcial: {result.comment}")
+                    print(f"[ERROR] Error al cerrar parcial: {result.comment}")
                     '''
 
     def close_pending(self, symbol, nombre_estrategia):
@@ -173,9 +173,9 @@ class MetaTrader5Broker:
 
         result = mt5.order_send(request)
         if self._check_execution_status(result):
-            print(f"✅ Orden pendiente eliminada: {order.ticket} ({order.symbol})")
+            print(f"[OK] Orden pendiente eliminada: {order.ticket} ({order.symbol})")
         else:
-            print(f"❌ Error al eliminar orden: {result.comment}")
+            print(f"[ERROR] Error al eliminar orden: {result.comment}")
             
     def disconnect(self) -> None:
         """
@@ -183,4 +183,4 @@ class MetaTrader5Broker:
         """
         import MetaTrader5 as mt5
         mt5.shutdown()
-        print("🔌 Desconectado de MetaTrader 5.")
+        print("[INFO] Desconectado de MetaTrader 5.")

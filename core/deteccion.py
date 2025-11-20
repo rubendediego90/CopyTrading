@@ -6,7 +6,7 @@ import MetaTrader5 as mt5
 def obtener_ultimas_velas(symbol, timeframe):
     return mt5.copy_rates_from_pos(symbol, timeframe, 0, 2)
 
-# 📈 Detecta si hay una nueva vela cerrada
+# Detecta si hay una nueva vela cerrada
 def nueva_vela_cerrada(symbol, timeframe, ultima_fecha_guardada):
     rates = obtener_ultimas_velas(symbol, timeframe)
     if rates is None or len(rates) < 2:

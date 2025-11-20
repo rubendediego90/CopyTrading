@@ -13,7 +13,7 @@ def main():
     try:
         broker = MetaTrader5Broker()
     except Exception as e:
-        print(f"❌ Error inicializando MetaTrader5Broker: {e}")
+        print(f"[ERROR] Inicializando MetaTrader5Broker: {e}")
         return
 
     # Filtrar y seleccionar solo símbolos activos
@@ -21,11 +21,11 @@ def main():
 
     for symbol in simbolos_activos:
         if not mt5.symbol_select(symbol, True):
-            print(f"❌ No se pudo seleccionar el símbolo: {symbol}")
+            print(f"[ERROR] No se pudo seleccionar el símbolo: {symbol}")
             broker.disconnect()
             return
 
-    print(f"📈 Monitorizando nuevas velas cerradas de: {', '.join(simbolos_activos)}")
+    print(f"[INFO] Monitorizando nuevas velas cerradas de: {', '.join(simbolos_activos)}")
 
     # Guardar última vela cerrada por símbolo
     ultima_fechas = {symbol: None for symbol in simbolos_activos}
@@ -39,11 +39,12 @@ def main():
                 nueva_vela, ultima_fechas[symbol] = nueva_vela_cerrada(symbol, timeframe, ultima_fechas[symbol])
 
                 if nueva_vela:
-                    print(f"\n✅ [{symbol}] Nueva vela cerrada detectada:")
+                    print(f"\n[OK] [{symbol}] Nueva vela cerrada detectada:")
                     print(formatear_vela(nueva_vela, timeframe=timeframe))
                     print("-" * 60)
 
-                    ema_rsi_adx(
+                    # Ejecutar estrategia y capturar señales
+                    entradas = ema_rsi_adx(
                         symbol=symbol,
                         timeframe=timeframe,
                         n=config["n"],
@@ -53,10 +54,18 @@ def main():
                         ema_period=config["ema_period"],
                         barras_totales=config["barras_totales"]
                     )
+                    
+                    # Procesar señales (aquí puedes agregar lógica de órdenes, notificaciones, etc.)
+                    if entradas and (entradas.get('long') or entradas.get('short')):
+                        print(f"\n[SIGNAL] Señales generadas para {symbol}:")
+                        if entradas.get('long'):
+                            print(f"   LONG: Entry={entradas['long']['entry_price']:.2f}, SL={entradas['long']['stop_loss']:.2f}")
+                        if entradas.get('short'):
+                            print(f"   SHORT: Entry={entradas['short']['entry_price']:.2f}, SL={entradas['short']['stop_loss']:.2f}")
             time.sleep(1)
 
     except KeyboardInterrupt:
-        print("🛑 Proceso detenido por el usuario.")
+        print("[INFO] Proceso detenido por el usuario.")
     finally:
         broker.disconnect()
 
