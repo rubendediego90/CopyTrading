@@ -1,12 +1,37 @@
+
 import MetaTrader5 as mt5
 import time
 import sys
+import threading
 
 from config import SYMBOL_CONFIGS
 from utils import formatear_vela
 from core import nueva_vela_cerrada
 from estrategias.ema_rsi_adx import ema_rsi_adx
 from brokers.MetaTrader5_broker import MetaTrader5Broker
+
+# Logger que escribe en consola y en archivo
+class DualLogger:
+    def __init__(self, filename):
+        self.lock = threading.Lock()
+        self.file = open(filename, 'a', encoding='utf-8')
+
+    def write(self, msg):
+        with self.lock:
+            self.file.write(msg)
+            self.file.flush()
+        sys.__stdout__.write(msg)
+        sys.__stdout__.flush()
+
+    def flush(self):
+        self.file.flush()
+        sys.__stdout__.flush()
+
+    def close(self):
+        self.file.close()
+
+# Redirigir print a logger dual
+sys.stdout = DualLogger('logs.txt')
 
 
 def main():
@@ -68,6 +93,10 @@ def main():
         print("[INFO] Proceso detenido por el usuario.")
     finally:
         broker.disconnect()
+        # Restaurar stdout y cerrar archivo
+        if hasattr(sys.stdout, 'close'):
+            sys.stdout.close()
+        sys.stdout = sys.__stdout__
 
 
 if __name__ == "__main__":

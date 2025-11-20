@@ -1,3 +1,10 @@
+class LogConfig:
+    def __init__(self, evaluar=True, bloque_rsi=True, contexto_ema=True, senal_final=True):
+        self.evaluar = evaluar
+        self.bloque_rsi = bloque_rsi
+        self.contexto_ema = contexto_ema
+        self.senal_final = senal_final
+
 import pandas as pd
 from datetime import timedelta
 from typing import Optional, Dict, List
@@ -237,24 +244,30 @@ def evaluar_entrada_para_vela(df, idx, ema_period, adx_min=30, adx_col='ADX_14')
     if idx <= 0:
         return resultado
 
+    # Configuración de logs (puedes pasarla como argumento si lo prefieres)
+    log_config = getattr(df, 'log_config', LogConfig())
+
     row = df.iloc[idx]
     prev_row = df.iloc[idx - 1]
 
-    # Imprimir precios de la vela evaluada para trazabilidad
-    print(f"[INFO] Vela evaluada index={idx}, time={row['time']}, O={row['open']:.2f}, H={row['high']:.2f}, L={row['low']:.2f}, C={row['close']:.2f}")
+    if log_config.evaluar:
+        print(f"[INFO] Vela evaluada index={idx}, time={row['time']}, O={row['open']:.2f}, H={row['high']:.2f}, L={row['low']:.2f}, C={row['close']:.2f}")
 
     if pd.isna(row['RSI']) or pd.isna(prev_row['RSI']):
-        print("[DEBUG] RSI no disponible para la vela, no se puede evaluar")
+        if log_config.evaluar:
+            print("[DEBUG] RSI no disponible para la vela, no se puede evaluar")
         return resultado
 
     for side in ('long', 'short'):
-        print(f"\n[CHECK] Evaluando {side.upper()} para vela index={idx}")
+        if log_config.evaluar:
+            print(f"\n[CHECK] Evaluando {side.upper()} para vela index={idx}")
         rsi_ok, rsi_msg = verificar_cruce_rsi(row, prev_row, side)
-        # Añadir el precio actual al mensaje de RSI/ADX para que sea sencillo de verificar en gráfico
-        print(f"   {rsi_msg} | C={row['close']:.2f}")
+        if log_config.evaluar:
+            print(f"   {rsi_msg} | C={row['close']:.2f}")
         adx_ok, adx_msg = verificar_adx(row, adx_min, adx_col=adx_col)
         adx_val = row.get(adx_col, 0)
-        print(f"   {adx_msg} | ADX_actual={adx_val:.2f} | C={row['close']:.2f}")
+        if log_config.evaluar:
+            print(f"   {adx_msg} | ADX_actual={adx_val:.2f} | C={row['close']:.2f}")
 
         if not rsi_ok or not adx_ok:
             reasons = []
@@ -262,25 +275,31 @@ def evaluar_entrada_para_vela(df, idx, ema_period, adx_min=30, adx_col='ADX_14')
                 reasons.append('RSI')
             if not adx_ok:
                 reasons.append('ADX')
-            print(f"   [RESULT] {side.upper()} RECHAZADO por: {', '.join(reasons)}")
+            if log_config.evaluar:
+                print(f"   [RESULT] {side.upper()} RECHAZADO por: {', '.join(reasons)}")
             continue
 
-        print(f"   [DEBUG] RSI y ADX pasan — recolectando bloque RSI hacia atrás (vela inicial C={row['close']:.2f})")
+        if log_config.bloque_rsi:
+            print(f"   [DEBUG] RSI y ADX pasan — recolectando bloque RSI hacia atrás (vela inicial C={row['close']:.2f})")
         bloque, extremo, cruce, logs_bloque = recolectar_bloque_rsi(df, idx, ema_period, side, adx_min, adx_col=adx_col)
-        for l in logs_bloque:
-            print(f"      {l}")
+        if log_config.bloque_rsi:
+            for l in logs_bloque:
+                print(f"      {l}")
 
         valido, logs_validacion = validar_bloque_completo(bloque, cruce, df, ema_period, side)
-        for l in logs_validacion:
-            print(f"      {l}")
+        if log_config.contexto_ema:
+            for l in logs_validacion:
+                print(f"      {l}")
 
         if not valido:
-            print(f"   [RESULT] {side.upper()} RECHAZADO en validación de bloque/contexto")
+            if log_config.evaluar:
+                print(f"   [RESULT] {side.upper()} RECHAZADO en validación de bloque/contexto")
             continue
 
-    senal = crear_senal(side, idx, row['close'], extremo, len(bloque))
-    resultado[side] = senal
-    print(f"   [RESULT] {side.upper()} ACEPTADO — señal construida | STOP LOSS: {senal['stop_loss']:.2f}")
+        senal = crear_senal(side, idx, row['close'], extremo, len(bloque))
+        resultado[side] = senal
+        if log_config.senal_final:
+            print(f"   [RESULT] {side.upper()} ACEPTADO — señal construida | STOP LOSS: {senal['stop_loss']:.2f}")
 
     return resultado
 
@@ -418,17 +437,12 @@ def ema_rsi_adx(symbol, timeframe, n, rsi_period=14, adx_length=14, adx_smoothin
             'short': {...} o None
         }
     """
-    print("[INFO] Barras totales a obtener:", barras_totales)
-    
     velas = obtener_velas_cerradas(symbol, timeframe, barras_totales)
     if velas is None:
         print("[ERROR] No se pudieron obtener las velas cerradas.")
         return {'long': None, 'short': None}
 
     df = convertir_rates_a_dataframe(velas)
-    duracion = timeframe_to_seconds(timeframe)
-
-    print(f"[INFO] Ultimas {n} velas cerradas de {symbol} con RSI, ADX y EMA (calculadas con {barras_totales} barras de contexto):")
 
     # Calculamos indicadores sobre todo el dataframe
     df['RSI'] = calcular_rsi(df, rsi_period)
@@ -447,18 +461,16 @@ def ema_rsi_adx(symbol, timeframe, n, rsi_period=14, adx_length=14, adx_smoothin
             print("[ERROR] No se encontró columna ADX en el dataframe")
             return {'long': None, 'short': None}
     
-    # DEBUG: Imprimir columnas del dataframe para verificar ADX
-    print(f"[DEBUG] Columnas del dataframe: {list(df.columns)}")
-    print(f"[DEBUG] Ultimas 2 filas de {adx_col}:")
-    print(df[[adx_col]].tail(2))
-
     # Evaluar sólo la última vela cerrada (evitar imprimir todo el histórico)
     last_idx = len(df) - 1
     if last_idx <= 0:
         return {'long': None, 'short': None}
 
-    # Mostrar info mínima
-    print(f"[INFO] Evaluando vela index={last_idx}, time={df.iloc[last_idx]['time']}")
+
+    # Permitir pasar log_config como argumento (por defecto todo activado)
+    import config
+    log_config = getattr(config, 'LOG_CONFIG', LogConfig())
+    df.log_config = log_config
 
     entradas = evaluar_entrada_para_vela(df, last_idx, ema_period, adx_min=30, adx_col=adx_col)
     imprimir_senales_finales(entradas)

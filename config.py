@@ -1,3 +1,5 @@
+# Importar LogConfig para configuración de logs
+from estrategias.ema_rsi_adx import LogConfig
 import MetaTrader5 as mt5
 #Tutorial 
 SYMBOL_CONFIGS = {
@@ -22,3 +24,11 @@ SYMBOL_CONFIGS = {
         "barras_totales": 100
     }
 }
+
+# Configuración global de logs para la estrategia EMA/RSI/ADX
+LOG_CONFIG = LogConfig(
+    evaluar=True,        # Logs de evaluación general
+    bloque_rsi=True,     # Logs del bloque RSI
+    contexto_ema=True,   # Logs de validación de contexto EMA
+    senal_final=True     # Logs de señal final aceptada
+)
